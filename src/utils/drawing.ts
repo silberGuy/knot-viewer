@@ -58,3 +58,35 @@ export function getIntersection(line1: Line, line2: Line) {
     };
     return intersection;
 }
+
+export function computeIntersections(loops: Loop[], interFlipIds: Set<string>) {
+    const intersections = [];
+    const lines = loops
+        .map((loop) =>
+            getLoopLines({
+                id: loop.id,
+                points: loop.points,
+                isClosed: loop.isClosed,
+            })
+        )
+        .flat();
+    for (let i = 0; i < lines.length; i++) {
+        for (let j = i + 1; j < lines.length; j++) {
+            const linei = lines[i];
+            const linej = lines[j];
+            const intersection = getIntersection(linei, linej);
+            if (intersection) {
+                const id = `inter-${linei.id}-${linej.id}`;
+                const topLine = interFlipIds.has(id) ? linej : linei;
+                const bottomLine = interFlipIds.has(id) ? linei : linej;
+                intersections.push({
+                    id,
+                    topLine,
+                    bottomLine,
+                    point: intersection,
+                });
+            }
+        }
+    }
+    return intersections;
+}
