@@ -27,6 +27,6 @@ const drawingData = ref<DrawingData>({
 	height: 100%;
 
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: 35% 50%;
 }
 </style>

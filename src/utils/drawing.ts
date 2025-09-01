@@ -10,13 +10,13 @@ export function getLoopLines(loop: Loop): Line[] {
     for (let i = 0; i < loop.points.length - 1; i++) {
         const p1 = loop.points[i];
         const p2 = loop.points[i + 1];
-        linePoints.push({ id: getLineId(loop.id, p1, p2), p1, p2 });
+        linePoints.push({ id: getLineId(loop.id, p1, p2), p1, p2, loopId: loop.id });
     }
     if (loop.isClosed && loop.points.length > 2) {
         // Close the loop
         const p1 = loop.points[loop.points.length - 1];
         const p2 = loop.points[0];
-        linePoints.push({ id: getLineId(loop.id, p1, p2), p1, p2 });
+        linePoints.push({ id: getLineId(loop.id, p1, p2), p1, p2, loopId: loop.id });
     }
     return linePoints;
 }
@@ -74,16 +74,21 @@ export function computeIntersections(loops: Loop[], interFlipIds: Set<string>) {
         for (let j = i + 1; j < lines.length; j++) {
             const linei = lines[i];
             const linej = lines[j];
+            const id = `inter-${linei.id}-${linej.id}`;
             const intersection = getIntersection(linei, linej);
+            const isFlipped = interFlipIds.has(id);
             if (intersection) {
-                const id = `inter-${linei.id}-${linej.id}`;
-                const topLine = interFlipIds.has(id) ? linej : linei;
-                const bottomLine = interFlipIds.has(id) ? linei : linej;
+                const topLine = isFlipped ? linei : linej;
+                const bottomLine = isFlipped ? linej : linei;
                 intersections.push({
                     id,
+                    topLineLoopId: topLine.loopId,
+                    bottomLineLoopId: bottomLine.loopId,
                     topLine,
                     bottomLine,
                     point: intersection,
+                    topLinePoints: [topLine.p1, topLine.p2],
+                    bottomLinePoints: [bottomLine.p1, bottomLine.p2],
                 });
             }
         }

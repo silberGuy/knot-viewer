@@ -24,7 +24,7 @@ import { computed } from "vue";
 import type { Loop } from "./types.ts";
 import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingLoop from "./DrawingLoop.vue";
-import { getIntersection, getLoopLines } from "../utils/drawing";
+import { computeIntersections } from "../utils/drawing";
 
 const loops = defineModel<Loop[]>("loops", {
 	default: () => [{ id: "1", points: [], isClosed: false }],
@@ -50,37 +50,9 @@ function addPoint(event: MouseEvent) {
 	}
 }
 
-const linesIntersections = computed(() => {
-	const intersections = [];
-	const lines = loops.value
-		.map((loop) =>
-			getLoopLines({
-				id: loop.id,
-				points: loop.points,
-				isClosed: loop.isClosed,
-			})
-		)
-		.flat();
-	for (let i = 0; i < lines.length; i++) {
-		for (let j = i + 1; j < lines.length; j++) {
-			const linei = lines[i];
-			const linej = lines[j];
-			const intersection = getIntersection(linei, linej);
-			if (intersection) {
-				const id = `inter-${linei.id}-${linej.id}`;
-				const topLine = interFlipIds.value.has(id) ? linej : linei;
-				const bottomLine = interFlipIds.value.has(id) ? linei : linej;
-				intersections.push({
-					id,
-					topLine,
-					bottomLine,
-					point: intersection,
-				});
-			}
-		}
-	}
-	return intersections;
-});
+const linesIntersections = computed(() =>
+	computeIntersections(loops.value, interFlipIds.value)
+);
 
 function flipIntersection(intersectionId: string) {
 	if (interFlipIds.value.has(intersectionId)) {
