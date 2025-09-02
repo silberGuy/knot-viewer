@@ -1,11 +1,11 @@
 <template>
 	<div class="drawing-board">
-		<svg @click="addPoint($event)">
+		<svg @click="addPoint" @mousedown.stop="onMouseDown">
 			<DrawingLoop
 				v-for="loop in loops"
 				:key="loop.id"
 				:id="loop.id"
-				:points="loop.points"
+				v-model:points="loop.points"
 				v-model:isClosed="loop.isClosed"
 				@update:isClosed="onLoopClose"
 			/>
@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { Loop } from "./types.ts";
 import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingLoop from "./DrawingLoop.vue";
@@ -85,9 +85,5 @@ svg {
 	background-color: #f9f9f9;
 	width: 100%;
 	height: 100%;
-}
-
-.point {
-	cursor: pointer;
 }
 </style>

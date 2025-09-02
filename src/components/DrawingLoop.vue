@@ -5,7 +5,16 @@
 		:index="index"
 		:line="line"
 	/>
-	<circle
+	<DrawingPoint
+		v-for="(point, index) in points"
+		:key="'point-' + index"
+		:coords="point"
+		@update:coords="
+			(newCoords) => (points[index] = { ...points[index], ...newCoords })
+		"
+		@click.stop="onPointClick(index)"
+	/>
+	<!-- <circle
 		v-for="(point, index) in points"
 		class="point"
 		:key="index"
@@ -13,8 +22,7 @@
 		:cy="point.y"
 		r="5"
 		fill="red"
-		@click.stop="onPointClick(index)"
-	/>
+	/> -->
 </template>
 
 <script setup lang="ts">
@@ -22,12 +30,17 @@ import { computed, toRefs } from "vue";
 import type { Point } from "./types.ts";
 import DrawingLine from "./DrawingLine.vue";
 import { getLoopLines } from "../utils/drawing.ts";
+import DrawingPoint from "./DrawingPoint.vue";
 
 const props = defineProps<{
 	id: string;
-	points: Point[];
 }>();
-const { points, id } = toRefs(props);
+
+const points = defineModel<Point[]>("points", {
+	type: Array as () => Point[],
+	required: true,
+});
+const { id } = toRefs(props);
 
 const isClosed = defineModel<boolean>("isClosed", {
 	type: Boolean,
