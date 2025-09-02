@@ -2,17 +2,19 @@
 	<div class="knot-viewer">
 		<TresCanvas>
 			<OrbitControls />
-			<CatmullRomCurve3
+			<!-- <CatmullRomCurve3
 				v-for="(knot, index) in knotsToRender"
-				:points="getKnot3DPoints(knot.id)"
+				:points="knot.points"
 				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
-				:segments="knot.points.length * 4"
-			/>
-			<!-- <Line2
-				v-for="(knot, index) in knotsToRender"
-				:points="getKnot3DPoints(knot.id)"
-				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
+				:segments="knot.points.length"
+				:lineWidth="2"
 			/> -->
+			<Line2
+				v-for="(knot, index) in knotsToRender"
+				:points="knot.points"
+				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
+				:lineWidth="3"
+			/>
 			<Grid
 				:args="[10.5, 10.5]"
 				cell-color="#82dbc5"
@@ -36,14 +38,23 @@ import type { DrawingData } from "./types";
 import { TresCanvas } from "@tresjs/core";
 import { OrbitControls, Grid, CatmullRomCurve3, Line2 } from "@tresjs/cientos";
 import { computeIntersections } from "../utils/drawing";
+import { line } from "@tresjs/cientos/dist/core/abstractions/Lensflare/constants.js";
 
 const props = defineProps<{
 	drawingData: DrawingData;
 }>();
 
-const knotsToRender = computed(() =>
+const filteredKnots = computed(() =>
 	props.drawingData.knots.filter((knot) => knot.points.length > 2)
 );
+
+const knotsToRender = computed(() => {
+	return filteredKnots.value.map((knot, index) => ({
+		...knot,
+		id: knot.id || (index + 1).toString(),
+		points: getKnot3DPoints(knot.id),
+	}));
+});
 
 const intersections = computed(() =>
 	computeIntersections(props.drawingData.knots, props.drawingData.interFlipIds)
@@ -51,8 +62,8 @@ const intersections = computed(() =>
 
 function getKnot3DPoints(knotId: string) {
 	// TODO: scale and center according to all points in all knots
-	const index = knotsToRender.value.findIndex((l) => l.id === knotId);
-	const knot = knotsToRender.value[index];
+	const index = filteredKnots.value.findIndex((l) => l.id === knotId);
+	const knot = filteredKnots.value[index];
 	if (!knot) return [];
 	const z = getZForId(knot.id);
 	const knotIntersections = intersections.value.filter(

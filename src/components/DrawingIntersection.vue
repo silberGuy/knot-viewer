@@ -24,7 +24,7 @@ const props = defineProps<{
 	intersectionPoint: { x: number; y: number };
 }>();
 
-const length = 10;
+const length = 13;
 const u = computed(() => {
 	const dx = props.topLine.p2.x - props.topLine.p1.x;
 	const dy = props.topLine.p2.y - props.topLine.p1.y;
