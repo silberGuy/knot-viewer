@@ -3,15 +3,15 @@
 		<TresCanvas>
 			<OrbitControls />
 			<CatmullRomCurve3
-				v-for="(loop, index) in loopsToRender"
-				:points="getLoop3DPoints(loop.id)"
-				:key="`${index}_${loop.points.length}_${loop.isClosed}`"
-				:segments="loop.points.length * 4"
+				v-for="(knot, index) in knotsToRender"
+				:points="getKnot3DPoints(knot.id)"
+				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
+				:segments="knot.points.length * 4"
 			/>
 			<!-- <Line2
-				v-for="(loop, index) in loopsToRender"
-				:points="getLoop3DPoints(loop.id)"
-				:key="`${index}_${loop.points.length}_${loop.isClosed}`"
+				v-for="(knot, index) in knotsToRender"
+				:points="getKnot3DPoints(knot.id)"
+				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
 			/> -->
 			<Grid
 				:args="[10.5, 10.5]"
@@ -41,34 +41,34 @@ const props = defineProps<{
 	drawingData: DrawingData;
 }>();
 
-const loopsToRender = computed(() =>
-	props.drawingData.loops.filter((loop) => loop.points.length > 2)
+const knotsToRender = computed(() =>
+	props.drawingData.knots.filter((knot) => knot.points.length > 2)
 );
 
 const intersections = computed(() =>
-	computeIntersections(props.drawingData.loops, props.drawingData.interFlipIds)
+	computeIntersections(props.drawingData.knots, props.drawingData.interFlipIds)
 );
 
-function getLoop3DPoints(loopId: string) {
-	// TODO: scale and center according to all points in all loops
-	const index = loopsToRender.value.findIndex((l) => l.id === loopId);
-	const loop = loopsToRender.value[index];
-	if (!loop) return [];
-	const z = getZForId(loop.id);
-	const loopIntersections = intersections.value.filter(
+function getKnot3DPoints(knotId: string) {
+	// TODO: scale and center according to all points in all knots
+	const index = knotsToRender.value.findIndex((l) => l.id === knotId);
+	const knot = knotsToRender.value[index];
+	if (!knot) return [];
+	const z = getZForId(knot.id);
+	const knotIntersections = intersections.value.filter(
 		(inter) =>
-			inter.topLineLoopId === loopId || inter.bottomLineLoopId === loopId
+			inter.topLineKnotId === knotId || inter.bottomLineKnotId === knotId
 	);
 	let points: { x: number; y: number; z: number; id?: string }[] =
-		loop.points.map((p) => ({
+		knot.points.map((p) => ({
 			...p,
 			z,
 		}));
-	if (loop.isClosed && points.length > 2) {
+	if (knot.isClosed && points.length > 2) {
 		points.push({ ...points[0] });
 	}
-	for (let inter of loopIntersections.reverse()) {
-		const isTop = inter.topLineLoopId === loopId;
+	for (let inter of knotIntersections.reverse()) {
+		const isTop = inter.topLineKnotId === knotId;
 		const interLinePoints = isTop
 			? inter.topLinePoints
 			: inter.bottomLinePoints;
@@ -78,23 +78,23 @@ function getLoop3DPoints(loopId: string) {
 		const p2IndexInPoints = points.findIndex(
 			(p) => p.id === interLinePoints[1].id
 		);
-		const loopPointIndex = Math.min(p1IndexInPoints, p2IndexInPoints) + 1;
+		const knotPointIndex = Math.min(p1IndexInPoints, p2IndexInPoints) + 1;
 		let interZ =
-			getZForId(isTop ? inter.bottomLineLoopId : inter.topLineLoopId) +
+			getZForId(isTop ? inter.bottomLineKnotId : inter.topLineKnotId) +
 			(isTop ? 0.2 : -0.2);
 		const interPoint = { ...inter.point, z: interZ };
 		points = [
-			...points.slice(0, loopPointIndex),
+			...points.slice(0, knotPointIndex),
 			interPoint,
-			...points.slice(loopPointIndex, Infinity),
+			...points.slice(knotPointIndex, Infinity),
 		];
 	}
 	return points.map(({ x, y, z }) => [x / 400, z, y / 400]);
 }
 
-function getZForId(loopId: string) {
+function getZForId(knotId: string) {
 	return 0.5;
-	const index = loopsToRender.value.findIndex((l) => l.id === loopId);
+	const index = knotsToRender.value.findIndex((l) => l.id === knotId);
 	return (index + 1) * 0.3;
 }
 </script>

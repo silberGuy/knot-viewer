@@ -1,13 +1,13 @@
 <template>
 	<div class="drawing-board">
 		<svg @click="addPoint" @mousedown.stop="onMouseDown">
-			<DrawingLoop
-				v-for="loop in loops"
-				:key="loop.id"
-				:id="loop.id"
-				v-model:points="loop.points"
-				v-model:isClosed="loop.isClosed"
-				@update:isClosed="onLoopClose"
+			<DrawingKnot
+				v-for="knot in knots"
+				:key="knot.id"
+				:id="knot.id"
+				v-model:points="knot.points"
+				v-model:isClosed="knot.isClosed"
+				@update:isClosed="onKnotClose"
 			/>
 			<DrawingIntersection
 				v-for="inter in linesIntersections"
@@ -21,12 +21,12 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Loop } from "./types.ts";
+import type { Knot } from "./types.ts";
 import DrawingIntersection from "./DrawingIntersection.vue";
-import DrawingLoop from "./DrawingLoop.vue";
+import DrawingKnot from "./DrawingKnot.vue";
 import { computeIntersections, getSvgCoords } from "../utils/drawing";
 
-const loops = defineModel<Loop[]>("loops", {
+const knots = defineModel<Knot[]>("knots", {
 	default: () => [{ id: "1", points: [], isClosed: false }],
 });
 
@@ -37,15 +37,15 @@ const interFlipIds = defineModel<Set<string>>("interFlipIds", {
 function addPoint(event: MouseEvent) {
 	const coords = getSvgCoords(event, event.currentTarget as SVGSVGElement);
 	if (coords) {
-		loops.value[0].points.push({
-			id: loops.value[0].points.length.toString(),
+		knots.value[0].points.push({
+			id: knots.value[0].points.length.toString(),
 			...coords,
 		});
 	}
 }
 
 const linesIntersections = computed(() =>
-	computeIntersections(loops.value, interFlipIds.value)
+	computeIntersections(knots.value, interFlipIds.value)
 );
 
 function flipIntersection(intersectionId: string) {
@@ -56,10 +56,10 @@ function flipIntersection(intersectionId: string) {
 	}
 }
 
-function onLoopClose(closed: boolean) {
+function onKnotClose(closed: boolean) {
 	if (closed) {
-		loops.value.unshift({
-			id: (loops.value.length + 1).toString(),
+		knots.value.unshift({
+			id: (knots.value.length + 1).toString(),
 			points: [],
 			isClosed: false,
 		});

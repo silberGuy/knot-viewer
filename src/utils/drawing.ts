@@ -1,22 +1,22 @@
-import type { Loop, Line, Point } from "../components/types";
+import type { Knot, Line, Point } from "../components/types";
 
 function getLineId(prefix: string, p1: Point, p2: Point): string {
     return [prefix, p1.id, p2.id].join("-");
 }
 
-export function getLoopLines(loop: Loop): Line[] {
-    if (loop.points.length < 2) return [];
+export function getKnotLines(knot: Knot): Line[] {
+    if (knot.points.length < 2) return [];
     const linePoints: Line[] = [];
-    for (let i = 0; i < loop.points.length - 1; i++) {
-        const p1 = loop.points[i];
-        const p2 = loop.points[i + 1];
-        linePoints.push({ id: getLineId(loop.id, p1, p2), p1, p2, loopId: loop.id });
+    for (let i = 0; i < knot.points.length - 1; i++) {
+        const p1 = knot.points[i];
+        const p2 = knot.points[i + 1];
+        linePoints.push({ id: getLineId(knot.id, p1, p2), p1, p2, knotId: knot.id });
     }
-    if (loop.isClosed && loop.points.length > 2) {
-        // Close the loop
-        const p1 = loop.points[loop.points.length - 1];
-        const p2 = loop.points[0];
-        linePoints.push({ id: getLineId(loop.id, p1, p2), p1, p2, loopId: loop.id });
+    if (knot.isClosed && knot.points.length > 2) {
+        // Close the knot
+        const p1 = knot.points[knot.points.length - 1];
+        const p2 = knot.points[0];
+        linePoints.push({ id: getLineId(knot.id, p1, p2), p1, p2, knotId: knot.id });
     }
     return linePoints;
 }
@@ -59,14 +59,14 @@ export function getIntersection(line1: Line, line2: Line) {
     return intersection;
 }
 
-export function computeIntersections(loops: Loop[], interFlipIds: Set<string>) {
+export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
     const intersections = [];
-    const lines = loops
-        .map((loop) =>
-            getLoopLines({
-                id: loop.id,
-                points: loop.points,
-                isClosed: loop.isClosed,
+    const lines = knots
+        .map((knot) =>
+            getKnotLines({
+                id: knot.id,
+                points: knot.points,
+                isClosed: knot.isClosed,
             })
         )
         .flat();
@@ -82,8 +82,8 @@ export function computeIntersections(loops: Loop[], interFlipIds: Set<string>) {
                 const bottomLine = isFlipped ? linej : linei;
                 intersections.push({
                     id,
-                    topLineLoopId: topLine.loopId,
-                    bottomLineLoopId: bottomLine.loopId,
+                    topLineKnotId: topLine.knotId,
+                    bottomLineKnotId: bottomLine.knotId,
                     topLine,
                     bottomLine,
                     point: intersection,

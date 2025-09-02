@@ -30,7 +30,7 @@
 import { computed, toRefs } from "vue";
 import type { Line, Point } from "./types.ts";
 import DrawingLine from "./DrawingLine.vue";
-import { getLoopLines, getSvgCoords } from "../utils/drawing.ts";
+import { getKnotLines, getSvgCoords } from "../utils/drawing.ts";
 import DrawingPoint from "./DrawingPoint.vue";
 
 const props = defineProps<{
@@ -49,7 +49,7 @@ const isClosed = defineModel<boolean>("isClosed", {
 });
 
 const lines = computed(() => {
-	return getLoopLines({
+	return getKnotLines({
 		id: id.value,
 		points: points.value,
 		isClosed: isClosed.value,
@@ -57,7 +57,7 @@ const lines = computed(() => {
 });
 
 function onPointClick(index: number) {
-	if (index === 0 && !isClosed.value) {
+	if (index === 0 && !isClosed.value && points.value.length > 2) {
 		isClosed.value = true;
 	}
 }

@@ -1,7 +1,7 @@
 <template>
 	<div class="app-layout">
 		<DrawingBoard
-			v-model:loops="drawingData.loops"
+			v-model:knots="drawingData.knots"
 			v-model:interFlipIds="drawingData.interFlipIds"
 		/>
 		<KnotViewer :drawingData="drawingData" />
@@ -15,7 +15,7 @@ import DrawingBoard from "./components/DrawingBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 
 const drawingData = ref<DrawingData>({
-	loops: [{ id: "1", points: [], isClosed: false }],
+	knots: [{ id: "1", points: [], isClosed: false }],
 	interFlipIds: new Set<string>(),
 });
 </script>
