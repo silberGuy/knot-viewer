@@ -34,11 +34,10 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Coords2D, Coords3D, DrawingData } from "./types";
+import type { Coords2D, DrawingData } from "./types";
 import { TresCanvas } from "@tresjs/core";
-import { OrbitControls, Grid, CatmullRomCurve3, Line2 } from "@tresjs/cientos";
+import { OrbitControls, Grid, Line2 } from "@tresjs/cientos";
 import { computeIntersections } from "../utils/drawing";
-import { line } from "@tresjs/cientos/dist/core/abstractions/Lensflare/constants.js";
 
 const props = defineProps<{
 	drawingData: DrawingData;
