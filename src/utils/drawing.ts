@@ -1,4 +1,4 @@
-import type { Coords2D, Knot, Line, Point } from "../components/types";
+import type { Coords2D, Intersection, Knot, Line, Point } from "../components/types";
 
 function getLineId(prefix: string, p1: Point, p2: Point): string {
     return [prefix, p1.id, p2.id].join("-");
@@ -60,7 +60,7 @@ export function getIntersection(line1: Line, line2: Line) {
 }
 
 export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
-    const intersections = [];
+    const intersections: Intersection[] = [];
     const lines = knots
         .map((knot) =>
             getKnotLines({
@@ -87,8 +87,6 @@ export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
                     topLine,
                     bottomLine,
                     point: intersection,
-                    topLinePoints: [topLine.p1, topLine.p2],
-                    bottomLinePoints: [bottomLine.p1, bottomLine.p2],
                 });
             }
         }
@@ -107,3 +105,39 @@ export function getSvgCoords(event: MouseEvent, svg: SVGSVGElement): Coords2D | 
     }
     return null;
 }
+
+export function combineKnotPointsWithIntersections(knot: Knot, intersections: Intersection[]) {
+    const knotId = knot.id;
+    const knotIntersections = intersections.filter(
+        (inter) =>
+            inter.topLineKnotId === knotId || inter.bottomLineKnotId === knotId
+    );
+    let points: (Coords2D & { id?: string, intersection?: Intersection, isTop?: boolean })[] = [...knot.points];
+    if (knot.isClosed && points.length > 2) {
+        points.push({ ...points[0] });
+    }
+    const getSpliceIndex = (line: Line) => {
+        const p1Index = points.findIndex(p => p.id === line.p1.id);
+        const p2Index = points.findIndex(p => p.id === line.p2.id);
+        return Math.max(p1Index, p2Index);
+    }
+    for (let inter of knotIntersections) {
+        if (inter.topLineKnotId === knotId) {
+            const knotPointIndex = getSpliceIndex(inter.topLine)
+            const interPoint = { ...inter.point, id: inter.id, intersection: inter, isTop: true };
+            points.splice(knotPointIndex, 0, interPoint);
+        }
+        if (inter.bottomLineKnotId === knotId) {
+            const knotPointIndex = getSpliceIndex(inter.bottomLine)
+            const interPoint = { ...inter.point, id: inter.id, intersection: inter, isTop: false };
+            points.splice(knotPointIndex, 0, interPoint);
+        }
+    }
+    return points;
+}
+
+// export function getKnotPlaneData(knot: Knot, interFlipIds: Set<string>) {
+//     if (knot.points.length < 3 || !knot.isClosed) return null;
+//     const points = [...knot.points];
+//     const intersections = computeIntersections([knot], interFlipIds);
+// }
