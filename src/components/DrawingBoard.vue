@@ -20,11 +20,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import type { Loop } from "./types.ts";
 import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingLoop from "./DrawingLoop.vue";
-import { computeIntersections } from "../utils/drawing";
+import { computeIntersections, getSvgCoords } from "../utils/drawing";
 
 const loops = defineModel<Loop[]>("loops", {
 	default: () => [{ id: "1", points: [], isClosed: false }],
@@ -35,17 +35,11 @@ const interFlipIds = defineModel<Set<string>>("interFlipIds", {
 });
 
 function addPoint(event: MouseEvent) {
-	const svg = event.currentTarget as SVGSVGElement;
-	const point = svg.createSVGPoint();
-	point.x = event.clientX;
-	point.y = event.clientY;
-	const ctm = svg.getScreenCTM();
-	if (ctm) {
-		const { x, y } = point.matrixTransform(ctm.inverse());
+	const coords = getSvgCoords(event, event.currentTarget as SVGSVGElement);
+	if (coords) {
 		loops.value[0].points.push({
 			id: loops.value[0].points.length.toString(),
-			x,
-			y,
+			...coords,
 		});
 	}
 }

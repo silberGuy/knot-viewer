@@ -5,7 +5,7 @@
 		:cx="coords.x"
 		:cy="coords.y"
 		r="5"
-		fill="red"
+		fill="#ff8e5c"
 	/>
 </template>
 

@@ -95,3 +95,15 @@ export function computeIntersections(loops: Loop[], interFlipIds: Set<string>) {
     }
     return intersections;
 }
+
+export function getSvgCoords(event: MouseEvent, svg: SVGSVGElement) {
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const ctm = svg.getScreenCTM();
+    if (ctm) {
+        const { x, y } = point.matrixTransform(ctm.inverse());
+        return { x, y };
+    }
+    return null;
+}

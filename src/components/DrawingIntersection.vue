@@ -7,12 +7,11 @@
 			fill="white"
 		/>
 		<line
+			class="drawing-line"
 			:x1="shortLinePoint1.x"
 			:y1="shortLinePoint1.y"
 			:x2="shortLinePoint2.x"
 			:y2="shortLinePoint2.y"
-			stroke="blue"
-			stroke-width="2"
 		/>
 	</g>
 </template>
