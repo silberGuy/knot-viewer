@@ -1,4 +1,4 @@
-import type { Knot, Line, Point } from "../components/types";
+import type { Coords2D, Knot, Line, Point } from "../components/types";
 
 function getLineId(prefix: string, p1: Point, p2: Point): string {
     return [prefix, p1.id, p2.id].join("-");
@@ -96,7 +96,7 @@ export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
     return intersections;
 }
 
-export function getSvgCoords(event: MouseEvent, svg: SVGSVGElement) {
+export function getSvgCoords(event: MouseEvent, svg: SVGSVGElement): Coords2D | null {
     const point = svg.createSVGPoint();
     point.x = event.clientX;
     point.y = event.clientY;

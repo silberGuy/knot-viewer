@@ -18,10 +18,10 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Line } from "./types";
+import type { Coords2D, Line } from "./types";
 const props = defineProps<{
 	topLine: Line;
-	intersectionPoint: { x: number; y: number };
+	intersectionPoint: Coords2D;
 }>();
 
 const length = 13;

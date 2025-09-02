@@ -12,8 +12,9 @@
 <script setup lang="ts">
 import { useDraggable } from "@vueuse/core";
 import { computed, useTemplateRef } from "vue";
+import type { Coords2D } from "./types";
 
-const coords = defineModel<{ x: number; y: number }>("coords", {
+const coords = defineModel<Coords2D>("coords", {
 	required: true,
 });
 

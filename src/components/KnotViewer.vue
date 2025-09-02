@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { DrawingData } from "./types";
+import type { Coords2D, Coords3D, DrawingData } from "./types";
 import { TresCanvas } from "@tresjs/core";
 import { OrbitControls, Grid, CatmullRomCurve3, Line2 } from "@tresjs/cientos";
 import { computeIntersections } from "../utils/drawing";
@@ -70,11 +70,12 @@ function getKnot3DPoints(knotId: string) {
 		(inter) =>
 			inter.topLineKnotId === knotId || inter.bottomLineKnotId === knotId
 	);
-	let points: { x: number; y: number; z: number; id?: string }[] =
-		knot.points.map((p) => ({
+	let points: (Coords2D & { z: number; id?: string })[] = knot.points.map(
+		(p) => ({
 			...p,
 			z,
-		}));
+		})
+	);
 	if (knot.isClosed && points.length > 2) {
 		points.push({ ...points[0] });
 	}
