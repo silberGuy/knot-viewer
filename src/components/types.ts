@@ -11,3 +11,8 @@ export type Intersection = {
     bottomLine: Line;
     point: Coords2D;
 }
+export type KnotDiagramPoint = Coords2D & {
+    id: string;
+    intersection?: Intersection;
+    isTop?: boolean;
+}

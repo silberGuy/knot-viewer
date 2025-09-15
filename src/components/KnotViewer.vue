@@ -15,6 +15,13 @@
 				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
 				:lineWidth="3"
 			/>
+			<Line2
+				v-if="surfaces.length > 0"
+				v-for="loop in surfaces"
+				:key="JSON.stringify(loop)"
+				:points="loop"
+				:lineWidth="3"
+			/>
 			<Grid
 				:args="[10.5, 10.5]"
 				cell-color="#82dbc5"
@@ -40,6 +47,7 @@ import { OrbitControls, Grid, Line2 } from "@tresjs/cientos";
 import {
 	combineKnotPointsWithIntersections,
 	computeIntersections,
+	getSurfaceLoopsForKnot,
 } from "../utils/drawing";
 
 const props = defineProps<{
@@ -71,7 +79,24 @@ function getKnot3DPoints(knot: Knot) {
 		if (intersection) {
 			z = isTop ? 0.75 : 0.25;
 		}
-		return [x / 400, z, y / 400];
+		return [x / 400, z, y / 400] as [number, number, number];
 	});
 }
+
+const surfaces = computed(() => {
+	if (filteredKnots.value.length === 0) return [];
+
+	const knotPoints = combineKnotPointsWithIntersections(
+		filteredKnots.value[0],
+		intersections.value
+	);
+	const surfaceLoops = getSurfaceLoopsForKnot(knotPoints);
+	return surfaceLoops.map((loop, loopIndex) => {
+		const closedLoop = [...loop, loop[0]];
+		return closedLoop.map((point) => {
+			const coords = [point.x / 400, 0.1 * loopIndex, point.y / 400];
+			return coords as [number, number, number];
+		});
+	});
+});
 </script>
