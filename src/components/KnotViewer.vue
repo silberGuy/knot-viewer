@@ -15,13 +15,13 @@
 				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
 				:lineWidth="3"
 			/>
-			<Line2
+			<!-- <Line2
 				v-if="surfaces.length > 0"
 				v-for="loop in surfaces"
 				:key="JSON.stringify(loop)"
 				:points="loop"
 				:lineWidth="3"
-			/>
+			/> -->
 			<Grid
 				:args="[10.5, 10.5]"
 				cell-color="#82dbc5"
@@ -74,13 +74,26 @@ function getKnot3DPoints(knot: Knot) {
 	// TODO: scale and center according to all points in all knots
 	if (!knot) return [];
 	const points = combineKnotPointsWithIntersections(knot, intersections.value);
-	return points.map(({ x, y, intersection, isTop }) => {
-		let z = 0.5;
-		if (intersection) {
-			z = isTop ? 0.75 : 0.25;
+	const surfaces = getSurfaceLoopsForKnot(points);
+	return points.map(
+		({ x, y, intersection, isTop, id, intersectionParallelId }) => {
+			let zLevel = surfaces.findIndex((s) => s.some((sp) => sp.id === id));
+			if (intersection) {
+				const intersectionLevels = [
+					surfaces.findIndex((s) => s.some((sp) => sp.id === id)),
+					surfaces.findIndex((s) =>
+						s.some((sp) => sp.id === intersectionParallelId)
+					),
+				];
+				zLevel = isTop
+					? Math.max(...intersectionLevels)
+					: Math.min(...intersectionLevels);
+			}
+			let z = 0.25 * zLevel;
+			// let z = 0.5;
+			return [x / 400, z, y / 400] as [number, number, number];
 		}
-		return [x / 400, z, y / 400] as [number, number, number];
-	});
+	);
 }
 
 const surfaces = computed(() => {
@@ -94,7 +107,8 @@ const surfaces = computed(() => {
 	return surfaceLoops.map((loop, loopIndex) => {
 		const closedLoop = [...loop, loop[0]];
 		return closedLoop.map((point) => {
-			const coords = [point.x / 400, 0.1 * loopIndex, point.y / 400];
+			const z = 0.1 * loopIndex;
+			const coords = [point.x / 400, z, point.y / 400];
 			return coords as [number, number, number];
 		});
 	});
