@@ -15,6 +15,13 @@
 				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
 				:lineWidth="3"
 			/>
+			<Line2
+				v-for="(triangle, index) in surfacesTriangles"
+				:points="triangle"
+				:key="triangle.flat().join('_')"
+				:color="0x223344 * 2 * index"
+				:lineWidth="2"
+			/>
 			<!-- <Line2
 				v-if="surfaces.length > 0"
 				v-for="loop in surfaces"
@@ -41,12 +48,13 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { DrawingData, Knot } from "./types";
+import type { Coords2D, DrawingData, Knot } from "./types";
 import { TresCanvas } from "@tresjs/core";
 import { OrbitControls, Grid, Line2 } from "@tresjs/cientos";
 import {
 	combineKnotPointsWithIntersections,
 	computeIntersections,
+	getLoopSurfaceTriangles,
 	getSurfaceLoopsForKnot,
 } from "../utils/drawing";
 
@@ -70,47 +78,57 @@ const intersections = computed(() =>
 	computeIntersections(props.drawingData.knots, props.drawingData.interFlipIds)
 );
 
-function getKnot3DPoints(knot: Knot) {
+function get3DCoords(
+	point: Coords2D,
+	surfaceIndex: number
+): [number, number, number] {
 	// TODO: scale and center according to all points in all knots
+	return [point.x / 400, 0.25 * surfaceIndex, point.y / 400];
+}
+
+function getKnot3DPoints(knot: Knot) {
 	if (!knot) return [];
 	const points = combineKnotPointsWithIntersections(knot, intersections.value);
 	const surfaces = getSurfaceLoopsForKnot(points);
-	return points.map(
-		({ x, y, intersection, isTop, id, intersectionParallelId }) => {
-			let zLevel = surfaces.findIndex((s) => s.some((sp) => sp.id === id));
-			if (intersection) {
-				const intersectionLevels = [
-					surfaces.findIndex((s) => s.some((sp) => sp.id === id)),
-					surfaces.findIndex((s) =>
-						s.some((sp) => sp.id === intersectionParallelId)
-					),
-				];
-				zLevel = isTop
-					? Math.max(...intersectionLevels)
-					: Math.min(...intersectionLevels);
-			}
-			let z = 0.25 * zLevel;
-			// let z = 0.5;
-			return [x / 400, z, y / 400] as [number, number, number];
+	return points.map((point) => {
+		const { id, intersection, intersectionParallelId, isTop } = point;
+		let surfaceIndex = surfaces.findIndex((s) => s.some((sp) => sp.id === id));
+		if (intersection) {
+			const interSurfaces = [
+				surfaces.findIndex((s) => s.some((sp) => sp.id === id)),
+				surfaces.findIndex((s) =>
+					s.some((sp) => sp.id === intersectionParallelId)
+				),
+			];
+			surfaceIndex = isTop
+				? Math.max(...interSurfaces)
+				: Math.min(...interSurfaces);
 		}
-	);
+		return get3DCoords(point, surfaceIndex);
+	});
 }
 
-const surfaces = computed(() => {
-	if (filteredKnots.value.length === 0) return [];
+// const surfaces = computed(() => {
+// 	if (filteredKnots.value.length === 0) return [];
 
-	const knotPoints = combineKnotPointsWithIntersections(
-		filteredKnots.value[0],
-		intersections.value
-	);
-	const surfaceLoops = getSurfaceLoopsForKnot(knotPoints);
-	return surfaceLoops.map((loop, loopIndex) => {
-		const closedLoop = [...loop, loop[0]];
-		return closedLoop.map((point) => {
-			const z = 0.1 * loopIndex;
-			const coords = [point.x / 400, z, point.y / 400];
-			return coords as [number, number, number];
-		});
-	});
+// 	const knotPoints = combineKnotPointsWithIntersections(
+// 		filteredKnots.value[0],
+// 		intersections.value
+// 	);
+// 	const surfaceLoops = getSurfaceLoopsForKnot(knotPoints);
+// 	return surfaceLoops.map((loop, loopIndex) => {
+// 		const closedLoop = [...loop, loop[0]];
+// 		return closedLoop.map((point) => {
+// 			const z = 0.1 * loopIndex;
+// 			const coords = [point.x / 400, z, point.y / 400];
+// 			return coords as [number, number, number];
+// 		});
+// 	});
+// });
+
+const surfacesTriangles = computed(() => {
+	return knotsToRender.value
+		.map((knot) => getLoopSurfaceTriangles(knot.points))
+		.flat();
 });
 </script>
