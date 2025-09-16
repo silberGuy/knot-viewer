@@ -9,17 +9,17 @@
 				:segments="knot.points.length"
 				:lineWidth="2"
 			/> -->
-			<Line2
-				v-for="(knot, index) in knotsToRender"
-				:points="knot.points"
-				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
+			<!-- <Line2
+				v-for="knot in knotsToRender"
+				:points="knot.points3D"
+				:key="knot.points3D.flat().join('_')"
 				:lineWidth="3"
-			/>
+			/> -->
 			<Line2
 				v-for="(triangle, index) in surfacesTriangles"
 				:points="triangle"
 				:key="triangle.flat().join('_')"
-				:color="0x223344 * 2 * index"
+				:color="0x223344 * 4 * index"
 				:lineWidth="2"
 			/>
 			<!-- <Line2
@@ -68,9 +68,9 @@ const filteredKnots = computed(() =>
 
 const knotsToRender = computed(() => {
 	return filteredKnots.value.map((knot, index) => ({
-		...knot,
+		knot,
 		id: knot.id || (index + 1).toString(),
-		points: getKnot3DPoints(knot),
+		points3D: getKnot3DPoints(knot),
 	}));
 });
 
@@ -126,9 +126,23 @@ function getKnot3DPoints(knot: Knot) {
 // 	});
 // });
 
+function getKnotSurfaceTriangles(knot: Knot) {
+	const knotPoints = combineKnotPointsWithIntersections(
+		knot,
+		intersections.value
+	);
+	const surfacesLoops = getSurfaceLoopsForKnot(knotPoints);
+	return surfacesLoops
+		.map((loop, loopIndex) => {
+			const points3D = loop.map((p) => get3DCoords(p, loopIndex));
+			return getLoopSurfaceTriangles(points3D);
+		})
+		.flat();
+}
+
 const surfacesTriangles = computed(() => {
 	return knotsToRender.value
-		.map((knot) => getLoopSurfaceTriangles(knot.points))
+		.map(({ knot }) => getKnotSurfaceTriangles(knot))
 		.flat();
 });
 </script>

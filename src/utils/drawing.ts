@@ -205,19 +205,19 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
 
 export function getLoopSurfaceTriangles(points: [number, number, number][]) {
     if (points.length < 3) return [];
-    const triangles = [];
+    const trianglesIndexes = [];
+    const lastIndex = points.length - 2;
     let index1 = 0;
-    let index2 = points.length - 2;
+    let index2 = lastIndex;
     let advanceIndex1 = true;
-    while (index1 !== index2) {
-        triangles.push([
-            points[index1],
-            points[index2],
-            points[advanceIndex1 ? index1 + 1 : index2 - 1],
-            points[index1],
-        ]);
+    while (index2 > index1 + 1) {
+        const index3 = advanceIndex1 ? (index1 + 1) : (index2 - 1);
+        trianglesIndexes.push([index1, index2, index3]);
         if (advanceIndex1) index1++;
         else index2--;
+        advanceIndex1 = !advanceIndex1;
     }
-    return triangles;
+    return trianglesIndexes.map(([index1, index2, index3]) => ([
+        points[index1], points[index2], points[index3], points[index1]
+    ]))
 }
