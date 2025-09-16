@@ -1,3 +1,4 @@
+import { Earcut } from "three/src/extras/Earcut.js";
 import type { Coords2D, Intersection, Knot, KnotDiagramPoint, Line, Point } from "../components/types";
 
 const CLOSING_POINT_ID = 'closing-point';
@@ -205,19 +206,43 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
 
 export function getLoopSurfaceTriangles(points: [number, number, number][]) {
     if (points.length < 3) return [];
-    const trianglesIndexes = [];
-    const lastIndex = points.length - 2;
-    let index1 = 0;
-    let index2 = lastIndex;
-    let advanceIndex1 = true;
-    while (index2 > index1 + 1) {
-        const index3 = advanceIndex1 ? (index1 + 1) : (index2 - 1);
-        trianglesIndexes.push([index1, index2, index3]);
-        if (advanceIndex1) index1++;
-        else index2--;
-        advanceIndex1 = !advanceIndex1;
+    const points2D = points.map(([x, _z, y]) => ([x, y]));
+    const cut = Earcut.triangulate(points2D.flat(), [], 2);
+    const triangles: [number, number, number][][] = [];
+    for (let i = 0; i < cut.length; i += 3) {
+        triangles.push([
+            points[cut[i]],
+            points[cut[i + 1]],
+            points[cut[i + 2]],
+            points[cut[i]],
+        ]);
     }
-    return trianglesIndexes.map(([index1, index2, index3]) => ([
-        points[index1], points[index2], points[index3], points[index1]
-    ]))
+    return triangles;
+}
+
+export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (p: KnotDiagramPoint) => [number, number, number]) {
+    const visitedIntersections = new Set<string>();
+    const intersectionTriangles: [number, number, number][][] = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const point = points[i];
+        if (point.intersection && !visitedIntersections.has(point.intersection.id)) {
+            const loopPoints = point.isTop ? points.reverse() : points
+            visitedIntersections.add(point.intersection.id);
+            const p1 = point;
+            const p2 = getNextPointForSurfaceLoops(loopPoints, p1);
+            let p2Index = points.findIndex(p => p.id === p2?.id);
+            if (p2Index === 0) p2Index = points.length - 1;
+            const p3 = points[p2Index - 1];
+            const p4 = getNextPointForSurfaceLoops(loopPoints, p3);
+            if (!p2 || !p4) throw new Error(`could not calculate loop for intersection: ${point.intersection.id}`);
+            const renderPoints = [to3D(p1), to3D(p2), to3D(p3), to3D(p4)];
+            intersectionTriangles.push([
+                renderPoints[3], renderPoints[0], renderPoints[2],
+            ]);
+            intersectionTriangles.push([
+                renderPoints[1], renderPoints[0], renderPoints[2],
+            ]);
+        }
+    }
+    return intersectionTriangles;
 }

@@ -2,25 +2,17 @@
 	<div class="knot-viewer">
 		<TresCanvas>
 			<OrbitControls />
-			<!-- <CatmullRomCurve3
-				v-for="(knot, index) in knotsToRender"
-				:points="knot.points"
-				:key="`${index}_${knot.points.length}_${knot.isClosed}`"
-				:segments="knot.points.length"
-				:lineWidth="2"
-			/> -->
-			<!-- <Line2
+			<Line2
 				v-for="knot in knotsToRender"
 				:points="knot.points3D"
 				:key="knot.points3D.flat().join('_')"
 				:lineWidth="3"
-			/> -->
-			<Line2
+			/>
+			<ViewerTriangle
 				v-for="(triangle, index) in surfacesTriangles"
 				:points="triangle"
 				:key="triangle.flat().join('_')"
 				:color="0x223344 * 4 * index"
-				:lineWidth="2"
 			/>
 			<!-- <Line2
 				v-if="surfaces.length > 0"
@@ -54,9 +46,11 @@ import { OrbitControls, Grid, Line2 } from "@tresjs/cientos";
 import {
 	combineKnotPointsWithIntersections,
 	computeIntersections,
+	getKnotIntersectionTriangles,
 	getLoopSurfaceTriangles,
 	getSurfaceLoopsForKnot,
 } from "../utils/drawing";
+import ViewerTriangle from "./ViewerTriangle.vue";
 
 const props = defineProps<{
 	drawingData: DrawingData;
@@ -108,36 +102,26 @@ function getKnot3DPoints(knot: Knot) {
 	});
 }
 
-// const surfaces = computed(() => {
-// 	if (filteredKnots.value.length === 0) return [];
-
-// 	const knotPoints = combineKnotPointsWithIntersections(
-// 		filteredKnots.value[0],
-// 		intersections.value
-// 	);
-// 	const surfaceLoops = getSurfaceLoopsForKnot(knotPoints);
-// 	return surfaceLoops.map((loop, loopIndex) => {
-// 		const closedLoop = [...loop, loop[0]];
-// 		return closedLoop.map((point) => {
-// 			const z = 0.1 * loopIndex;
-// 			const coords = [point.x / 400, z, point.y / 400];
-// 			return coords as [number, number, number];
-// 		});
-// 	});
-// });
-
 function getKnotSurfaceTriangles(knot: Knot) {
 	const knotPoints = combineKnotPointsWithIntersections(
 		knot,
 		intersections.value
 	);
 	const surfacesLoops = getSurfaceLoopsForKnot(knotPoints);
-	return surfacesLoops
+	const surfaceTriangles = surfacesLoops
 		.map((loop, loopIndex) => {
 			const points3D = loop.map((p) => get3DCoords(p, loopIndex));
 			return getLoopSurfaceTriangles(points3D);
 		})
 		.flat();
+
+	const interTriangles = getKnotIntersectionTriangles(knotPoints, (p) =>
+		get3DCoords(
+			p,
+			surfacesLoops.findIndex((loop) => loop.some((lp) => lp.id === p.id))
+		)
+	);
+	return [...surfaceTriangles, ...interTriangles];
 }
 
 const surfacesTriangles = computed(() => {
@@ -145,4 +129,12 @@ const surfacesTriangles = computed(() => {
 		.map(({ knot }) => getKnotSurfaceTriangles(knot))
 		.flat();
 });
+
+// const intersectionTriangles = computed(() => {
+// 	const knotPoints = combineKnotPointsWithIntersections(
+// 		knot,
+// 		intersections.value
+// 	);
+// 	return getKnotIntersectionTriangles()
+// })
 </script>
