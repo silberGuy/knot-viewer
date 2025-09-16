@@ -181,12 +181,11 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
     if (!startPoint) return surfaceLoops;
 
     const findLoop = (currentPoint: KnotDiagramPoint, loop: KnotDiagramPoint[]) => {
-        console.log(currentPoint);
         loop.push(currentPoint);
         visited.add(currentPoint.id);
 
         const nextPoint = getNextPointForSurfaceLoops(points, currentPoint);
-        if (nextPoint && !visited.has(nextPoint.id) || nextPoint?.intersection) {
+        if (nextPoint && !visited.has(nextPoint.id)) {
             findLoop(nextPoint, loop);
         }
     };
@@ -197,7 +196,6 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
             findLoop(point, loop);
             if (loop.length > 0) {
                 surfaceLoops.push(loop);
-                console.log(loop)
             }
         }
     }
