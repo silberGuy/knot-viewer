@@ -61,6 +61,10 @@ export function getIntersection(line1: Line, line2: Line) {
     const intersection = {
         x: line1.p1.x + ua * (line1.p2.x - line1.p1.x),
         y: line1.p1.y + ua * (line1.p2.y - line1.p1.y),
+        linesRatios: {
+            [line1.id]: ua,
+            [line2.id]: ub
+        }
     };
     return intersection;
 }
@@ -124,32 +128,49 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
         points.push(createClosingPoint(points));
     }
 
-    const getSpliceIndex = (line: Line) => points.findIndex(p => p.id === line.p2.id);
+    const getSpliceIndex = (inter: Intersection, isTop: boolean): number => {
+        const line = isTop ? inter.topLine : inter.bottomLine;
+        const inLineRatio = inter.point.linesRatios[line.id];
+        let currentIndex = points.findIndex(p => p.id === line.p2.id);
+
+        const isIntersectionAfterPoint = (intersection?: Intersection) => {
+            if (!intersection) return false;
+            return intersection.point.linesRatios[line.id] > inLineRatio;
+        }
+
+        while (isIntersectionAfterPoint(points[currentIndex - 1].intersection)) {
+            currentIndex--;
+        }
+        return currentIndex;
+    };
     for (let inter of knotIntersections) {
+        const topId = `${inter.id}-top`;
+        const bottomId = inter.id;
         if (inter.topLineKnotId === knotId) {
-            const knotPointIndex = getSpliceIndex(inter.topLine);
-            const interPoint = { ...inter.point, id: `${inter.id}-top`, intersection: inter, isTop: true };
+            const knotPointIndex = getSpliceIndex(inter, true);
+            const interPoint = { ...inter.point, id: topId, intersectionParallelId: bottomId, intersection: inter, isTop: true };
             points.splice(knotPointIndex, 0, interPoint);
         }
         if (inter.bottomLineKnotId === knotId) {
-            const knotPointIndex = getSpliceIndex(inter.bottomLine);
-            const interPoint = { ...inter.point, id: inter.id, intersection: inter, isTop: false };
+            const knotPointIndex = getSpliceIndex(inter, false);
+            const interPoint = { ...inter.point, id: bottomId, intersectionParallelId: topId, intersection: inter, isTop: false };
             points.splice(knotPointIndex, 0, interPoint);
         }
     }
     return points;
 }
 
-function getNextPointForSurfaceLoops(points: KnotDiagramPoint[], pointId: string): KnotDiagramPoint | null {
-    const index = points.findIndex(p => p.id === pointId);
-    if (index === -1) return null;
-    const point = points[index];
+function getNextPointForSurfaceLoops(points: KnotDiagramPoint[], point: KnotDiagramPoint): KnotDiagramPoint | null {
+    const index = points.findIndex(p => p.id === point.id);
     if (!point.intersection) return points[index + 1] || points[0];
     if (point.intersection.topLine.id === point.intersection.bottomLine.id) return points[index + 1] || points[0];
 
     // It's an intersection point
-    const p = point.isTop ? point.intersection.bottomLine.p2 : point.intersection.topLine.p2;
-    return { ...p, intersection: point.intersection, isTop: point.isTop }
+    const parallelIndex = points.findIndex(p => p.id === point.intersectionParallelId);
+    if (parallelIndex === -1) {
+        throw new Error(`cannot find parallel for ${point.intersection.id}`)
+    };
+    return points[parallelIndex + 1];
 }
 
 export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
@@ -160,11 +181,12 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
     if (!startPoint) return surfaceLoops;
 
     const findLoop = (currentPoint: KnotDiagramPoint, loop: KnotDiagramPoint[]) => {
+        console.log(currentPoint);
         loop.push(currentPoint);
         visited.add(currentPoint.id);
 
-        const nextPoint = getNextPointForSurfaceLoops(points, currentPoint.id);
-        if (nextPoint && !visited.has(nextPoint.id)) {
+        const nextPoint = getNextPointForSurfaceLoops(points, currentPoint);
+        if (nextPoint && !visited.has(nextPoint.id) || nextPoint?.intersection) {
             findLoop(nextPoint, loop);
         }
     };
@@ -175,6 +197,7 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
             findLoop(point, loop);
             if (loop.length > 0) {
                 surfaceLoops.push(loop);
+                console.log(loop)
             }
         }
     }
