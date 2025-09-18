@@ -226,14 +226,13 @@ export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (
     for (let i = 0; i < points.length - 1; i++) {
         const point = points[i];
         if (point.intersection && !visitedIntersections.has(point.intersection.id)) {
-            const loopPoints = point.isTop ? points.reverse() : points
             visitedIntersections.add(point.intersection.id);
             const p1 = point;
-            const p2 = getNextPointForSurfaceLoops(loopPoints, p1);
+            const p2 = getNextPointForSurfaceLoops(points, p1);
             let p2Index = points.findIndex(p => p.id === p2?.id);
             if (p2Index === 0) p2Index = points.length - 1;
             const p3 = points[p2Index - 1];
-            const p4 = getNextPointForSurfaceLoops(loopPoints, p3);
+            const p4 = getNextPointForSurfaceLoops(points, p3);
             if (!p2 || !p4) throw new Error(`could not calculate loop for intersection: ${point.intersection.id}`);
             const renderPoints = [to3D(p1), to3D(p2), to3D(p3), to3D(p4)];
             intersectionTriangles.push([

@@ -12,7 +12,7 @@
 				v-for="(triangle, index) in surfacesTriangles"
 				:points="triangle"
 				:key="triangle.flat().join('_')"
-				:color="0x223344 * 4 * index"
+				:color="0x223344 * index"
 			/>
 			<!-- <Line2
 				v-if="surfaces.length > 0"
