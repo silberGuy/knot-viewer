@@ -13,10 +13,12 @@ export type Intersection = {
     topLine: Line;
     bottomLine: Line;
     point: IntersectionPoint;
+    isFlipped: boolean;
 }
 export type KnotDiagramPoint = Coords2D & {
     id: string;
     intersection?: Intersection;
     intersectionParallelId?: string;
     isTop?: boolean;
+    isIntersectionSep?: boolean;
 }
