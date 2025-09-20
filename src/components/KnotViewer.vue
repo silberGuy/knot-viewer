@@ -12,16 +12,18 @@
 				<!-- <Sphere v-for="point in knot.points3D" /> -->
 				<Sphere
 					v-for="(point, index) in knot.points3D"
-					:args="[0.05, 0.05, 0.05]"
+					:args="[0.02, 0.02, 0.02]"
 					:position="point"
-					:color="0x111112 * index"
+					:color="
+						Math.floor((255 * index) / (knot.points3D.length - 1)) * 0x10101
+					"
 				/>
 			</template>
 			<ViewerTriangle
 				v-for="(triangle, index) in surfacesTriangles"
 				:points="triangle"
 				:key="triangle.flat().join('_')"
-				:color="0x223344 * index"
+				:color="0xffaa00"
 			/>
 			<!-- <Line2
 				v-if="surfaces.length > 0"
