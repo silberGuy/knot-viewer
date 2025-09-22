@@ -3,8 +3,12 @@ import type { Coords2D, Intersection, Knot, KnotDiagramPoint, Line, Point } from
 
 const CLOSING_POINT_ID = 'closing-point';
 
-function createClosingPoint<T extends Point>(points: T[]): T {
-    return { ...points[0], id: CLOSING_POINT_ID }
+function createClosingPoint<T extends Point>(points: T[], knotId: string): T {
+    return { ...points[0], id: `${knotId}-${CLOSING_POINT_ID}`, knotId }
+}
+
+function isClosingPoint(point: Point) {
+    return point.id.endsWith(CLOSING_POINT_ID);
 }
 
 function getLineId(prefix: string, p1: Point, p2: Point): string {
@@ -22,7 +26,7 @@ export function getKnotLines(knot: Knot): Line[] {
     if (knot.isClosed && knot.points.length > 2) {
         // Close the knot
         const p1 = knot.points[knot.points.length - 1];
-        const p2 = createClosingPoint(knot.points);
+        const p2 = createClosingPoint(knot.points, knot.id);
         linePoints.push({ id: getLineId(knot.id, p1, p2), p1, p2, knotId: knot.id });
     }
     return linePoints;
@@ -85,7 +89,7 @@ export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
         for (let j = i + 1; j < lines.length; j++) {
             const linei = lines[i];
             const linej = lines[j];
-            if (i === 0 && linej.p2.id === CLOSING_POINT_ID) continue;
+            if (i === 0 && isClosingPoint(linej.p2)) continue;
             const id = `inter-${linei.id}-${linej.id}`;
             const intersection = getIntersection(linei, linej);
             const isFlipped = interFlipIds.has(id);
@@ -100,6 +104,7 @@ export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
                     bottomLine,
                     point: intersection,
                     isFlipped,
+                    isWithinKnot: topLine.knotId === bottomLine.knotId,
                 });
             }
         }
@@ -127,7 +132,7 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
     );
     let points: KnotDiagramPoint[] = [...knot.points];
     if (knot.isClosed && points.length > 2) {
-        points.push(createClosingPoint(points));
+        points.push(createClosingPoint(points, knot.id));
     }
 
     const getSpliceIndex = (inter: Intersection, isTop: boolean): number => {
@@ -150,12 +155,12 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
         const bottomId = inter.id;
         if (inter.topLineKnotId === knotId) {
             const knotPointIndex = getSpliceIndex(inter, true);
-            const interPoint = { ...inter.point, id: topId, intersectionParallelId: bottomId, intersection: inter, isTop: true };
+            const interPoint = { ...inter.point, id: topId, intersectionParallelId: bottomId, intersection: inter, isTop: true, knotId };
             points.splice(knotPointIndex, 0, interPoint);
         }
         if (inter.bottomLineKnotId === knotId) {
             const knotPointIndex = getSpliceIndex(inter, false);
-            const interPoint = { ...inter.point, id: bottomId, intersectionParallelId: topId, intersection: inter, isTop: false };
+            const interPoint = { ...inter.point, id: bottomId, intersectionParallelId: topId, intersection: inter, isTop: false, knotId };
             points.splice(knotPointIndex, 0, interPoint);
         }
     }
@@ -170,12 +175,14 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
                 x: (points[i].x + prevPoint.x) / 2,
                 y: (points[i].y + prevPoint.y) / 2,
                 isIntersectionSep: true,
+                knotId: knot.id,
             }
             const afterPoint: KnotDiagramPoint = {
                 id: `post-${points[i].id}`,
                 x: (points[i].x + nextPoint.x) / 2,
                 y: (points[i].y + nextPoint.y) / 2,
                 isIntersectionSep: true,
+                knotId: knot.id,
             }
             points.splice(i + 1, 0, afterPoint);
             points.splice(i, 0, beforePoint);
@@ -193,7 +200,10 @@ function getIntersectionOrientationSign(intersection: Intersection) {
     return Math.sign(v1x * v2y - v1y * v2x)
 }
 
-export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
+export function getSurfaceLoops(points: KnotDiagramPoint[]) {
+    if (new Set(points.map(p => p.id)).size < points.length) {
+        throw new Error("points must have unique ids");
+    }
     const surfaceLoops: KnotDiagramPoint[][] = [];
     const visited = new Set<string>();
 
@@ -204,7 +214,7 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
     const walk = (point: KnotDiagramPoint) => {
         const index = points.findIndex(p => p.id === point.id);
         const nextPoint = points[index + 1] || points[0];
-        if (point.intersection) {
+        if (point.intersection?.isWithinKnot) {
             const parallelIndex = points.findIndex(p => p.id === point.intersectionParallelId);
             if (passedIntersections.has(point.intersection.id)) {
                 return nextPoint;
@@ -212,16 +222,20 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
             return points[parallelIndex + 1];
         }
         if (nextPoint.intersection) {
+            const parallelIndex = points.findIndex(p => p.id === nextPoint.intersectionParallelId);
+            const parallelPoint = points[parallelIndex];
+            if (!parallelPoint) {
+                console.warn(`could not find parallel point for intersection: ${nextPoint.id}`);
+                return nextPoint
+            };
             // These checks make sure top intersections are added to later loops than their bottom
-            if (nextPoint.isTop && !visited.has(nextPoint.intersectionParallelId!)) {
-                const parallelPoint = points.find(p => p.id === nextPoint.intersectionParallelId);
+            const useParallelPoint = (
+                (nextPoint.isTop && !visited.has(nextPoint.intersectionParallelId!)) ||
+                (!nextPoint.isTop && visited.has(nextPoint.id))
+            )
+            if (useParallelPoint) {
                 passedIntersections.add(nextPoint.intersection.id);
-                return parallelPoint;
-            }
-            if (!nextPoint.isTop && visited.has(nextPoint.id)) {
-                const parallelPoint = points.find(p => p.id === nextPoint.intersectionParallelId);
-                passedIntersections.add(nextPoint.intersection.id);
-                return parallelPoint;
+                return parallelPoint.knotId === point.knotId ? parallelPoint : points[index + 2] || points[0];
             }
         };
 
@@ -238,14 +252,22 @@ export function getSurfaceLoopsForKnot(points: KnotDiagramPoint[]) {
         }
     };
 
-    for (const point of points.filter(p => !p.intersection)) {
-        if (!visited.has(point.id)) {
-            const loop: KnotDiagramPoint[] = [];
-            findLoop(point, loop);
-            if (loop.length > 0) {
-                surfaceLoops.push(loop);
+    while (visited.size < points.length) {
+        for (const point of points) {
+            if (!visited.has(point.id)) {
+                if (point.isTop && !visited.has(point.intersectionParallelId!)) {
+                    continue; // top intersections are added to loops after their bottom
+                }
+                const loop: KnotDiagramPoint[] = [];
+                findLoop(point, loop);
+                if (loop.length > 0) {
+                    surfaceLoops.push(loop);
+                }
             }
         }
+    }
+    if (points.length > visited.size) {
+        console.log(2222, points.filter(p => !visited.has(p.id)));
     }
 
     return surfaceLoops;
@@ -270,18 +292,19 @@ export function getLoopSurfaceTriangles(points: KnotDiagramPoint[], to3D: (p: Kn
 }
 
 export function findPointSurfaceIndex(surfaces: KnotDiagramPoint[][], point: KnotDiagramPoint) {
-    return surfaces.findIndex(s => s.some(sp => sp.id === point.id));
+    return surfaces.findIndex(s => s.some(sp => sp.id === point.id && sp.knotId === point.knotId));
 }
 
-export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (p: KnotDiagramPoint, i: number) => [number, number, number]) {
+export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (p: KnotDiagramPoint, i: number) => [number, number, number], surfaces: KnotDiagramPoint[][]) {
     const visitedIntersections = new Set<string>();
     const intersectionTriangles: [number, number, number][][] = [];
-    const surfaces = getSurfaceLoopsForKnot(points);
     const getSurfaceIndex = findPointSurfaceIndex.bind(null, surfaces);
+
+    // TODO: skip intersections of different knots
 
     for (let i = 0; i < points.length - 1; i++) {
         const point = points[i];
-        if (point.intersection && !visitedIntersections.has(point.intersection.id)) {
+        if (point.intersection?.isWithinKnot && !visitedIntersections.has(point.intersection.id)) {
             const p1 = point;
             const p1ParallelIndex = points.findIndex(p => p.id === p1.intersectionParallelId)!
             let dir = getIntersectionOrientationSign(point.intersection);

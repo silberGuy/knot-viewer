@@ -20,7 +20,7 @@
 				/>
 			</template>
 			<ViewerTriangle
-				v-for="(triangle, index) in surfacesTriangles"
+				v-for="triangle in surfacesTriangles"
 				:points="triangle"
 				:key="triangle.flat().join('_')"
 				:color="0xffaa00"
@@ -60,7 +60,7 @@ import {
 	findPointSurfaceIndex,
 	getKnotIntersectionTriangles,
 	getLoopSurfaceTriangles,
-	getSurfaceLoopsForKnot,
+	getSurfaceLoops,
 } from "../utils/drawing";
 import ViewerTriangle from "./ViewerTriangle.vue";
 
@@ -69,14 +69,25 @@ const props = defineProps<{
 }>();
 
 const filteredKnots = computed(() =>
-	props.drawingData.knots.filter((knot) => knot.points.length > 2)
+	props.drawingData.knots
+		.filter((knot) => knot.points.length > 2)
+		.map((knot, index) => ({
+			knot,
+			id: knot.id || (index + 1).toString(),
+			points: combineKnotPointsWithIntersections(knot, intersections.value),
+		}))
 );
 
+const surfaces = computed(() => {
+	const allKnotsPoints = filteredKnots.value.map(({ points }) => points).flat();
+	const surfaces = getSurfaceLoops(allKnotsPoints);
+	return surfaces;
+});
+
 const knotsToRender = computed(() => {
-	return filteredKnots.value.map((knot, index) => ({
-		knot,
-		id: knot.id || (index + 1).toString(),
-		points3D: getKnot3DPoints(knot),
+	return filteredKnots.value.map((knot) => ({
+		...knot,
+		points3D: getKnot3DPoints(knot.knot),
 	}));
 });
 
@@ -84,45 +95,66 @@ const intersections = computed(() =>
 	computeIntersections(props.drawingData.knots, props.drawingData.interFlipIds)
 );
 
-function get3DCoords(
-	point: KnotDiagramPoint,
-	points: KnotDiagramPoint[],
-	surfaces: KnotDiagramPoint[][]
-): [number, number, number] {
-	let surfaceIndex = findPointSurfaceIndex(surfaces, point);
+function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
+	let surfaceIndex = findPointSurfaceIndex(surfaces.value, point);
 	// TODO: scale and center according to all points in all knots
-	return [point.x / 400, 0.25 * surfaceIndex, point.y / 400];
+	if (surfaceIndex === -1)
+		console.warn("could not find surface for point", point);
+	return [point.x / 300, 0.25 * surfaceIndex, point.y / 300];
 }
 
 function getKnot3DPoints(knot: Knot) {
 	if (!knot) return [];
 	const points = combineKnotPointsWithIntersections(knot, intersections.value);
-	const surfaces = getSurfaceLoopsForKnot(points);
-	return points.map((point) => get3DCoords(point, points, surfaces));
+	return points.map((point) => get3DCoords(point));
 }
 
-function getKnotSurfaceTriangles(knot: Knot) {
-	const knotPoints = combineKnotPointsWithIntersections(
-		knot,
-		intersections.value
-	);
-	const surfacesLoops = getSurfaceLoopsForKnot(knotPoints);
-	const surfaceTriangles = surfacesLoops
-		.map((loop) =>
-			getLoopSurfaceTriangles(loop, (p) =>
-				get3DCoords(p, knotPoints, surfacesLoops)
-			)
+function getKnotSurfaceTriangles(_knot: Knot) {
+	const knotPoints = filteredKnots.value
+		.map(({ knot }) =>
+			combineKnotPointsWithIntersections(knot, intersections.value)
 		)
 		.flat();
+	const surfacesLoops = getSurfaceLoops(knotPoints);
+	const surfaceTriangles = surfacesLoops
+		.map((loop) => getLoopSurfaceTriangles(loop, (p) => get3DCoords(p)))
+		.flat();
 
-	const interTriangles = getKnotIntersectionTriangles(knotPoints, (p) =>
-		get3DCoords(p, knotPoints, surfacesLoops)
+	const interTriangles = getKnotIntersectionTriangles(
+		knotPoints,
+		(p) => get3DCoords(p),
+		surfaces.value
 	);
-	return [...surfaceTriangles, ...interTriangles];
+
+	const intersectionsNotWithin = knotPoints.filter(
+		(point) => point.intersection && !point.intersection.isWithinKnot
+	);
+	const extraTriangles = intersectionsNotWithin
+		.map((inter) => {
+			const pointIndex = knotPoints.findIndex((p) => p.id === inter.id);
+			const interSurfaceIndex = findPointSurfaceIndex(surfaces.value, inter);
+			const prevPoint = knotPoints[pointIndex - 1];
+			const nextPoint = knotPoints[pointIndex + 1];
+			const prevSurfaceIndex = findPointSurfaceIndex(surfaces.value, prevPoint);
+			const nextSurfaceIndex = findPointSurfaceIndex(surfaces.value, nextPoint);
+			if (
+				interSurfaceIndex !== prevSurfaceIndex ||
+				interSurfaceIndex !== nextSurfaceIndex
+			) {
+				return [
+					get3DCoords(knotPoints[pointIndex - 1]),
+					get3DCoords(inter),
+					get3DCoords(knotPoints[pointIndex + 1]),
+				];
+			}
+		})
+		.filter((t): t is [number, number, number][] => !!t);
+
+	return [...surfaceTriangles, ...interTriangles, ...extraTriangles];
 }
 
 const surfacesTriangles = computed(() => {
-	return knotsToRender.value
+	return filteredKnots.value
 		.map(({ knot }) => getKnotSurfaceTriangles(knot))
 		.flat();
 });

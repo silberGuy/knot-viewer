@@ -10,6 +10,7 @@
 		v-for="(point, index) in points"
 		:key="'point-' + index"
 		:coords="point"
+		:id="point.id"
 		@update:coords="
 			(newCoords) => (points[index] = { ...points[index], ...newCoords })
 		"
@@ -75,6 +76,7 @@ function onLineClick(line: Line, clickEvent: MouseEvent) {
 			points.value.splice(pointIndex + 1, 0, {
 				id: points.value.length.toString(),
 				...coords,
+				knotId: id.value,
 			});
 		}
 	}

@@ -18,6 +18,8 @@ const coords = defineModel<Coords2D>("coords", {
 	required: true,
 });
 
+const props = defineProps<{ id: string }>();
+
 const el = useTemplateRef<HTMLElement>("el");
 const svg = computed(() => el.value?.closest("svg"));
 
@@ -33,6 +35,7 @@ useDraggable(el, {
 		if (ctm) {
 			const svgPoint = point.matrixTransform(ctm.inverse());
 			coords.value = { x: svgPoint.x, y: svgPoint.y };
+			console.log(`moving "${props.id}"`);
 		}
 	},
 });

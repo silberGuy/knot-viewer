@@ -1,5 +1,5 @@
 export type Coords2D = { x: number; y: number };
-export type Point = Coords2D & { id: string };
+export type Point = Coords2D & { id: string, knotId: string };
 export type Line = { id: string; p1: Point; p2: Point, knotId: string };
 export type Knot = { id: string; points: Point[]; isClosed: boolean; };
 export type DrawingData = { knots: Knot[]; interFlipIds: Set<string>; };
@@ -14,9 +14,11 @@ export type Intersection = {
     bottomLine: Line;
     point: IntersectionPoint;
     isFlipped: boolean;
+    isWithinKnot: boolean;
 }
 export type KnotDiagramPoint = Coords2D & {
     id: string;
+    knotId: string;
     intersection?: Intersection;
     intersectionParallelId?: string;
     isTop?: boolean;

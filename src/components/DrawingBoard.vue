@@ -20,12 +20,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import type { Knot, Coords2D } from "./types.ts";
 import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingKnot from "./DrawingKnot.vue";
 import { computeIntersections, getSvgCoords } from "../utils/drawing";
-import { useMousePressed } from "@vueuse/core";
+import { useMousePressed, useThrottleFn } from "@vueuse/core";
 
 const knots = defineModel<Knot[]>("knots", {
 	default: () => [{ id: "1", points: [], isClosed: false }],
@@ -58,16 +58,15 @@ function onMouseMove(event: MouseEvent) {
 	addPoint(coords);
 }
 
-const lastPointTime = ref<number>(Date.now());
-function addPoint(coords: Coords2D) {
-	const now = Date.now();
-	if (now - lastPointTime.value < 100) return;
-	lastPointTime.value = now;
+const addPoint = useThrottleFn((coords: Coords2D) => {
+	const knotId = knots.value[0].id;
+	const pointIndex = knots.value[0].points.length.toString();
 	knots.value[0].points.push({
-		id: knots.value[0].points.length.toString(),
+		id: `${knotId}-${pointIndex}`,
+		knotId,
 		...coords,
 	});
-}
+}, 100);
 
 const linesIntersections = computed(() =>
 	computeIntersections(knots.value, interFlipIds.value)
