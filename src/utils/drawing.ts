@@ -269,7 +269,7 @@ export function getSurfaceLoops(points: KnotDiagramPoint[]) {
                 findLoop(point, loop);
                 if (loop.length > 0) {
                     const interBottoms = loop.filter(p => p.intersection && !p.isTop && !p.intersection.isWithinKnot);
-                    if (interBottoms.length > 0) {
+                    if (surfaceLoops.length === 0 && interBottoms.length > 0) {
                         surfaceLoops.push(interBottoms);
                         surfaceLoops.push(loop.filter(p => !interBottoms.includes(p)));
                     } else {
@@ -280,7 +280,20 @@ export function getSurfaceLoops(points: KnotDiagramPoint[]) {
         }
     }
 
-    return surfaceLoops;
+    if (surfaceLoops[0].every(p => p.intersection && !p.isTop)) {
+        if (surfaceLoops[0][0].knotId === surfaceLoops[1][0].knotId) {
+            for (const point of [...surfaceLoops[0]]) {
+                const pointIndex = points.findIndex(p => p.id === point.id);
+                const prevPoint = points[pointIndex - 1];
+                if (surfaceLoops[1].includes(prevPoint)) {
+                    surfaceLoops[1].splice(surfaceLoops[1].indexOf(prevPoint) + 1, 0, point);
+                    surfaceLoops[0].splice(surfaceLoops[0].indexOf(point), 1);
+                }
+            }
+        }
+    }
+
+    return surfaceLoops.filter(loop => loop.length > 0);
 }
 
 export function getLoopSurfaceTriangles(points: KnotDiagramPoint[], to3D: (p: KnotDiagramPoint, i: number) => [number, number, number]) {
