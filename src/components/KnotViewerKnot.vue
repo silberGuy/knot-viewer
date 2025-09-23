@@ -10,7 +10,7 @@
 		v-for="triangle in surfaceTriangles"
 		:points="triangle"
 		:key="triangle.flat().join('_')"
-		:color="0xffaa00"
+		:color="surfaceColor"
 	/>
 </template>
 
@@ -26,8 +26,10 @@ import { Line2, Sphere } from "@tresjs/cientos";
 import type { KnotDiagramPoint } from "./types";
 
 const props = defineProps<{
+	knotId: string;
 	points: KnotDiagramPoint[];
 	allSurfaceLoops: KnotDiagramPoint[][];
+	surfaceColor?: number;
 }>();
 
 const points3D = computed(() => {
@@ -43,7 +45,9 @@ function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
 }
 
 const surfaceTriangles = computed(() => {
-	const surfacesLoops = props.allSurfaceLoops;
+	const surfacesLoops = props.allSurfaceLoops.filter(
+		(surface) => surface[0].knotId === props.knotId
+	);
 	const surfaceTriangles = surfacesLoops
 		.map((loop) => getLoopSurfaceTriangles(loop, get3DCoords))
 		.flat();

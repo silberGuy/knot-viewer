@@ -3,10 +3,12 @@
 		<TresCanvas>
 			<OrbitControls />
 			<KnotViewerKnot
-				v-for="knot in filteredKnots"
+				v-for="(knot, i) in filteredKnots"
 				:key="knot.id"
+				:knot-id="knot.id"
 				:points="knot.points"
 				:allSurfaceLoops="surfaces"
+				:surfaceColor="0x123456 * i"
 			/>
 			<Grid
 				:args="[10.5, 10.5]"
