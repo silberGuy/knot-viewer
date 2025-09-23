@@ -46,7 +46,7 @@ function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
 
 const surfaceTriangles = computed(() => {
 	const surfacesLoops = props.allSurfaceLoops.filter(
-		(surface) => surface[0].knotId === props.knotId
+		(surface) => surface[0] && surface[0].knotId === props.knotId
 	);
 	const surfaceTriangles = surfacesLoops
 		.map((loop) => getLoopSurfaceTriangles(loop, get3DCoords))

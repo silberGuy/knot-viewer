@@ -7,6 +7,10 @@ function createClosingPoint<T extends Point>(points: T[], knotId: string): T {
     return { ...points[0], id: `${knotId}-${CLOSING_POINT_ID}`, knotId }
 }
 
+function isStartingPoint(point: Point) {
+    return point.id.endsWith('-0');
+}
+
 function isClosingPoint(point: Point) {
     return point.id.endsWith(CLOSING_POINT_ID);
 }
@@ -89,7 +93,7 @@ export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
         for (let j = i + 1; j < lines.length; j++) {
             const linei = lines[i];
             const linej = lines[j];
-            if (i === 0 && isClosingPoint(linej.p2)) continue;
+            if (isStartingPoint(linei.p1) && isClosingPoint(linej.p2)) continue;
             const id = `inter-${linei.id}-${linej.id}`;
             const intersection = getIntersection(linei, linej);
             const isFlipped = interFlipIds.has(id);
@@ -214,6 +218,9 @@ export function getSurfaceLoops(points: KnotDiagramPoint[]) {
     const walk = (point: KnotDiagramPoint) => {
         const index = points.findIndex(p => p.id === point.id);
         const nextPoint = points[index + 1] || points[0];
+        if (nextPoint.knotId !== point.knotId) {
+            return null;
+        }
         if (point.intersection?.isWithinKnot) {
             const parallelIndex = points.findIndex(p => p.id === point.intersectionParallelId);
             if (passedIntersections.has(point.intersection.id)) {
@@ -261,13 +268,16 @@ export function getSurfaceLoops(points: KnotDiagramPoint[]) {
                 const loop: KnotDiagramPoint[] = [];
                 findLoop(point, loop);
                 if (loop.length > 0) {
-                    surfaceLoops.push(loop);
+                    const interBottoms = loop.filter(p => p.intersection && !p.isTop && !p.intersection.isWithinKnot);
+                    if (interBottoms.length > 0) {
+                        surfaceLoops.push(interBottoms);
+                        surfaceLoops.push(loop.filter(p => !interBottoms.includes(p)));
+                    } else {
+                        surfaceLoops.push(loop);
+                    }
                 }
             }
         }
-    }
-    if (points.length > visited.size) {
-        console.log(2222, points.filter(p => !visited.has(p.id)));
     }
 
     return surfaceLoops;
