@@ -9,12 +9,24 @@
 			@change="loadFromFile"
 			ref="fileInput"
 		/>
+
+		<div class="spacer" style="flex-grow: 1"></div>
+
+		<label style="user-select: none">
+			<input
+				type="checkbox"
+				id="toggle-surfaces"
+				v-model="controlsStore.showSurfaces"
+			/>
+			Show Surfaces
+		</label>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { DrawingData } from "../types";
+import { useControlsStore } from "../../data/controls";
 
 const props = defineProps<{
 	drawingData?: DrawingData;
@@ -25,6 +37,8 @@ const emit = defineEmits<{
 }>();
 
 const fileInput = ref<HTMLInputElement | null>(null);
+
+const controlsStore = useControlsStore();
 
 const canSave = computed(() => {
 	const points = props.drawingData?.knots.map((knot) => knot.points).flat();

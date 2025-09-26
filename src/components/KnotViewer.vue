@@ -9,6 +9,7 @@
 				:points="knot.points"
 				:allSurfaceLoops="surfaces"
 				:surfaceColor="knot.knot.color"
+				:showSurfaces="controlsStore.showSurfaces"
 			/>
 			<Grid
 				:args="[10.5, 10.5]"
@@ -38,10 +39,13 @@ import {
 	getSurfaceLoops,
 } from "../utils/drawing";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
+import { useControlsStore } from "../data/controls";
 
 const props = defineProps<{
 	drawingData: DrawingData;
 }>();
+
+const controlsStore = useControlsStore();
 
 const filteredKnots = computed(() =>
 	props.drawingData.knots

@@ -1,10 +1,15 @@
 <template>
-	<Line2 :points="points3D" :key="points3D.flat().join('_')" :lineWidth="3" />
+	<Line2
+		:points="points3D"
+		:key="points3D.flat().join('_')"
+		:lineWidth="4"
+		:color="lineColor"
+	/>
 	<Sphere
-		v-for="(point, index) in points3D"
+		v-for="point in points3D"
 		:args="[0.02, 0.02, 0.02]"
 		:position="point"
-		:color="Math.floor((255 * index) / (points3D.length - 1)) * 0x10101"
+		:color="pointsColor"
 	/>
 	<ViewerTriangle
 		v-for="triangle in surfaceTriangles"
@@ -24,16 +29,28 @@ import {
 import ViewerTriangle from "./ViewerTriangle.vue";
 import { Line2, Sphere } from "@tresjs/cientos";
 import type { KnotDiagramPoint } from "./types";
+import tinycolor from "tinycolor2";
 
 const props = defineProps<{
 	knotId: string;
 	points: KnotDiagramPoint[];
 	allSurfaceLoops: KnotDiagramPoint[][];
 	surfaceColor?: string;
+	showSurfaces: boolean;
 }>();
 
 const points3D = computed(() => {
 	return props.points.map((point) => get3DCoords(point));
+});
+
+const lineColor = computed(() => {
+	if (props.showSurfaces) return 0xffffff;
+	return props.surfaceColor || "0x123456";
+});
+
+const pointsColor = computed(() => {
+	if (props.showSurfaces) return 0xdddddd;
+	return tinycolor(props.surfaceColor).lighten(20).toString();
 });
 
 function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
@@ -45,6 +62,7 @@ function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
 }
 
 const surfaceTriangles = computed(() => {
+	if (!props.showSurfaces) return [];
 	const surfacesLoops = props.allSurfaceLoops.filter(
 		(surface) => surface[0] && surface[0].knotId === props.knotId
 	);
