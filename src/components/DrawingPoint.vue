@@ -4,8 +4,8 @@
 		class="point"
 		:cx="coords.x"
 		:cy="coords.y"
-		r="5"
-		fill="#ff8e5c"
+		r="6"
+		:fill="color"
 	/>
 </template>
 
@@ -13,15 +13,28 @@
 import { useDraggable } from "@vueuse/core";
 import { computed, useTemplateRef } from "vue";
 import type { Coords2D } from "./types";
+import tinycolor from "tinycolor2";
 
 const coords = defineModel<Coords2D>("coords", {
 	required: true,
 });
 
-const props = defineProps<{ id: string }>();
+const props = defineProps<{ id: string; color?: string }>();
 
 const el = useTemplateRef<HTMLElement>("el");
 const svg = computed(() => el.value?.closest("svg"));
+
+const color = computed(() => {
+	const c = tinycolor(props.color || "black");
+	const lightness = c.getBrightness();
+
+	if (lightness > 150) {
+		// already pretty bright
+		return c.lighten(15).toHexString();
+	} else {
+		return c.lighten(40).toHexString();
+	}
+});
 
 useDraggable(el, {
 	initialValue: { ...coords.value },

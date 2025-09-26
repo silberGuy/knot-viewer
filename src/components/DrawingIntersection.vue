@@ -12,6 +12,7 @@
 			:y1="shortLinePoint1.y"
 			:x2="shortLinePoint2.x"
 			:y2="shortLinePoint2.y"
+			:stroke="lineColor || 'black'"
 		/>
 	</g>
 </template>
@@ -22,6 +23,7 @@ import type { Coords2D, Line } from "./types";
 const props = defineProps<{
 	topLine: Line;
 	intersectionPoint: Coords2D;
+	lineColor?: string;
 }>();
 
 const length = 13;

@@ -5,6 +5,7 @@
 				v-for="knot in knots"
 				:key="knot.id"
 				:id="knot.id"
+				:color="knot.color"
 				v-model:points="knot.points"
 				v-model:isClosed="knot.isClosed"
 				@update:isClosed="onKnotClose"
@@ -13,6 +14,9 @@
 				v-for="inter in linesIntersections"
 				:topLine="inter.topLine"
 				:intersectionPoint="inter.point"
+				:lineColor="
+					knots.find((k) => k.id === inter.topLine.knotId)?.color || 'black'
+				"
 				@click.stop="flipIntersection(inter.id)"
 			/>
 		</svg>

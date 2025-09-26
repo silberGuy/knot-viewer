@@ -5,12 +5,14 @@
 		:index="index"
 		:line="line"
 		@click.stop="onLineClick(line, $event)"
+		:color="props.color"
 	/>
 	<DrawingPoint
 		v-for="(point, index) in points"
 		:key="'point-' + index"
 		:coords="point"
 		:id="point.id"
+		:color="props.color"
 		@update:coords="
 			(newCoords) => (points[index] = { ...points[index], ...newCoords })
 		"
@@ -36,6 +38,7 @@ import DrawingPoint from "./DrawingPoint.vue";
 
 const props = defineProps<{
 	id: string;
+	color?: string;
 }>();
 
 const points = defineModel<Point[]>("points", {

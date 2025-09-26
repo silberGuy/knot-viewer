@@ -66,6 +66,5 @@ button:focus-visible {
 
 
 .drawing-line {
-  stroke: gray;
   stroke-width: 3;
 }

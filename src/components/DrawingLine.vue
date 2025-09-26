@@ -5,6 +5,7 @@
 		:y1="line.p1.y"
 		:x2="line.p2.x"
 		:y2="line.p2.y"
+		:stroke="color || 'black'"
 	/>
 </template>
 
@@ -12,5 +13,6 @@
 import type { Line } from "./types";
 defineProps<{
 	line: Line;
+	color?: string;
 }>();
 </script>
