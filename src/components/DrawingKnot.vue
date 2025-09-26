@@ -17,16 +17,10 @@
 			(newCoords) => (points[index] = { ...points[index], ...newCoords })
 		"
 		@click.stop="onPointClick(index)"
+		@moveKnot="onMoveKnot"
+		@click.alt.stop="removePoint(index)"
+		@click.shift.alt.stop="emit('removeKnot')"
 	/>
-	<!-- <circle
-		v-for="(point, index) in points"
-		class="point"
-		:key="index"
-		:cx="point.x"
-		:cy="point.y"
-		r="5"
-		fill="red"
-	/> -->
 </template>
 
 <script setup lang="ts">
@@ -39,6 +33,10 @@ import DrawingPoint from "./DrawingPoint.vue";
 const props = defineProps<{
 	id: string;
 	color?: string;
+}>();
+
+const emit = defineEmits<{
+	(event: "removeKnot"): void;
 }>();
 
 const points = defineModel<Point[]>("points", {
@@ -66,6 +64,11 @@ function onPointClick(index: number) {
 	}
 }
 
+function removePoint(index: number) {
+	if (points.value.length <= 1) return;
+	points.value.splice(index, 1);
+}
+
 function onLineClick(line: Line, clickEvent: MouseEvent) {
 	const target = clickEvent.currentTarget as SVGElement;
 	const svg = target?.closest("svg") as SVGSVGElement;
@@ -83,5 +86,13 @@ function onLineClick(line: Line, clickEvent: MouseEvent) {
 			});
 		}
 	}
+}
+
+function onMoveKnot(delta: { x: number; y: number }) {
+	points.value = points.value.map((point) => ({
+		...point,
+		x: point.x + delta.x,
+		y: point.y + delta.y,
+	}));
 }
 </script>

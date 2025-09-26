@@ -10,6 +10,11 @@
 			ref="fileInput"
 		/>
 
+		<div>
+			Hold <span class="key">Shift</span> to move knot as one,
+			<span class="key">Alt</span> to remove points
+		</div>
+
 		<div class="spacer" style="flex-grow: 1"></div>
 
 		<label style="user-select: none">
@@ -113,5 +118,12 @@ button:hover {
 button.disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+span.key {
+	background-color: #555;
+	padding: 0.2em 0.4em;
+	border-radius: 4px;
+	font-family: monospace;
 }
 </style>

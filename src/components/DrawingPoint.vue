@@ -19,6 +19,10 @@ const coords = defineModel<Coords2D>("coords", {
 	required: true,
 });
 
+const emit = defineEmits<{
+	(event: "moveKnot", delta: Coords2D): void;
+}>();
+
 const props = defineProps<{ id: string; color?: string }>();
 
 const el = useTemplateRef<HTMLElement>("el");
@@ -28,8 +32,10 @@ const color = computed(() => {
 	const c = tinycolor(props.color || "black");
 	const lightness = c.getBrightness();
 
+	if (lightness > 200) {
+		return c.darken(20).toHexString();
+	}
 	if (lightness > 150) {
-		// already pretty bright
 		return c.lighten(15).toHexString();
 	} else {
 		return c.lighten(40).toHexString();
@@ -47,8 +53,15 @@ useDraggable(el, {
 		const ctm = svg.value.getScreenCTM();
 		if (ctm) {
 			const svgPoint = point.matrixTransform(ctm.inverse());
-			coords.value = { x: svgPoint.x, y: svgPoint.y };
-			console.log(`moving "${props.id}"`);
+			const delta = {
+				x: svgPoint.x - coords.value.x,
+				y: svgPoint.y - coords.value.y,
+			};
+			if (event.shiftKey) {
+				emit("moveKnot", delta);
+			} else {
+				coords.value = { x: svgPoint.x, y: svgPoint.y };
+			}
 		}
 	},
 });

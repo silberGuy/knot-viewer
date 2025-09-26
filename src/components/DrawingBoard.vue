@@ -2,13 +2,14 @@
 	<div class="drawing-board">
 		<svg @click.stop="onClick" @mousemove="onMouseMove">
 			<DrawingKnot
-				v-for="knot in knots"
+				v-for="(knot, index) in knots"
 				:key="knot.id"
 				:id="knot.id"
 				:color="knot.color"
 				v-model:points="knot.points"
 				v-model:isClosed="knot.isClosed"
 				@update:isClosed="onKnotClose"
+				@removeKnot="onRemoveKnot(index)"
 			/>
 			<DrawingIntersection
 				v-for="inter in linesIntersections"
@@ -24,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { Knot, Coords2D } from "./types.ts";
 import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingKnot from "./DrawingKnot.vue";
@@ -37,6 +38,8 @@ const knots = defineModel<Knot[]>("knots", {
 		{ id: "1", points: [], isClosed: false, color: knotsColors[0] },
 	],
 });
+
+const knotDrawn = ref(1);
 
 const interFlipIds = defineModel<Set<string>>("interFlipIds", {
 	default: () => new Set<string>(),
@@ -90,12 +93,18 @@ function flipIntersection(intersectionId: string) {
 function onKnotClose(closed: boolean) {
 	if (closed) {
 		knots.value.unshift({
-			id: (knots.value.length + 1).toString(),
+			id: (knotDrawn.value + 1).toString(),
 			points: [],
 			isClosed: false,
-			color: knotsColors[knots.value.length % knotsColors.length],
+			color: knotsColors[knotDrawn.value % knotsColors.length],
 		});
+		knotDrawn.value += 1;
 	}
+}
+
+function onRemoveKnot(index: number) {
+	if (knots.value.length <= 1) return;
+	knots.value.splice(index, 1);
 }
 </script>
 

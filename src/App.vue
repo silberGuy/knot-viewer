@@ -9,7 +9,10 @@
 			v-model:knots="drawingData.knots"
 			v-model:interFlipIds="drawingData.interFlipIds"
 		/>
-		<KnotViewer :drawingData="drawingData" />
+		<KnotViewer
+			:drawingData="drawingData"
+			:key="drawingData.knots.map((knot) => knot.id).join('-')"
+		/>
 	</div>
 </template>
 
