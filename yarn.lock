@@ -524,6 +524,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/tinycolor2@npm:^1":
+  version: 1.4.6
+  resolution: "@types/tinycolor2@npm:1.4.6"
+  checksum: 10c0/922020c3326460e9d8502c8a98f80db69f06fd14e07fe5a48e8ffe66175762298a9bd51263f2a0c9a40632886a74975a3ff79396defcdbeac0dc176e3e5056e8
+  languageName: node
+  linkType: hard
+
 "@types/web-bluetooth@npm:^0.0.21":
   version: 0.0.21
   resolution: "@types/web-bluetooth@npm:0.0.21"
@@ -1342,10 +1349,12 @@ __metadata:
     "@tresjs/cientos": "npm:^4.3.1"
     "@tresjs/core": "npm:^4.3.6"
     "@types/three": "npm:^0.179.0"
+    "@types/tinycolor2": "npm:^1"
     "@vitejs/plugin-vue": "npm:^6.0.1"
     "@vue/tsconfig": "npm:^0.7.0"
     "@vueuse/core": "npm:^13.9.0"
     three: "npm:^0.179.1"
+    tinycolor2: "npm:^1.6.0"
     typescript: "npm:~5.8.3"
     vite: "npm:^7.1.2"
     vue: "npm:^3.5.18"
@@ -1960,6 +1969,13 @@ __metadata:
     readable-stream: "npm:>=1.0.33-1 <1.1.0-0"
     xtend: "npm:>=4.0.0 <4.1.0-0"
   checksum: 10c0/3294325d73b120ffbb8cd00e28a649a99e194cef2638bf782b6c2eb0c163b388f7b7bb908003949f58f9f6b8f771defd24b6e4df051eb410fd87931521963b98
+  languageName: node
+  linkType: hard
+
+"tinycolor2@npm:^1.6.0":
+  version: 1.6.0
+  resolution: "tinycolor2@npm:1.6.0"
+  checksum: 10c0/9aa79a36ba2c2a87cb221453465cabacd04b9e35f9694373e846fdc78b1c768110f81e581ea41440106c0f24d9a023891d0887e8075885e790ac40eb0e74a5c1
   languageName: node
   linkType: hard
 

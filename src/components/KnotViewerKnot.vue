@@ -29,7 +29,7 @@ const props = defineProps<{
 	knotId: string;
 	points: KnotDiagramPoint[];
 	allSurfaceLoops: KnotDiagramPoint[][];
-	surfaceColor?: number;
+	surfaceColor?: string;
 }>();
 
 const points3D = computed(() => {

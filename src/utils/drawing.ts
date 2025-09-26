@@ -304,11 +304,12 @@ export function getLoopSurfaceTriangles(points: KnotDiagramPoint[], to3D: (p: Kn
     const cut = Earcut.triangulate(points2D.flat(), [], 2);
     const triangles: [number, number, number][][] = [];
     for (let i = 0; i < cut.length; i += 3) {
+        const [a, b, c] = cut.slice(i, i + 3).sort((x, y) => x - y);
         triangles.push([
-            points3D[cut[i]],
-            points3D[cut[i + 1]],
-            points3D[cut[i + 2]],
-            points3D[cut[i]],
+            points3D[a],
+            points3D[b],
+            points3D[c],
+            points3D[a],
         ]);
     }
     return triangles;
@@ -347,7 +348,7 @@ export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (
             ]);
             intersectionTriangles.push([
                 renderPoints[1], renderPoints[0], renderPoints[2],
-            ]);
+            ].reverse());
         }
     }
     return intersectionTriangles;

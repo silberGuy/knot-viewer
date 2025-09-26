@@ -19,9 +19,10 @@ import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 import Topbar from "./components/Topbar/Topbar.vue";
+import { knotsColors } from "./data/colors";
 
 const drawingData = ref<DrawingData>({
-	knots: [{ id: "1", points: [], isClosed: false }],
+	knots: [{ id: "1", points: [], isClosed: false, color: knotsColors[0] }],
 	interFlipIds: new Set<string>(),
 });
 

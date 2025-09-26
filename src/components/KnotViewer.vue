@@ -8,7 +8,7 @@
 				:knot-id="knot.id"
 				:points="knot.points"
 				:allSurfaceLoops="surfaces"
-				:surfaceColor="0x123456 * i"
+				:surfaceColor="knot.knot.color"
 			/>
 			<Grid
 				:args="[10.5, 10.5]"

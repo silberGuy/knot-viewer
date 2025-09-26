@@ -1,7 +1,7 @@
 export type Coords2D = { x: number; y: number };
 export type Point = Coords2D & { id: string, knotId: string };
 export type Line = { id: string; p1: Point; p2: Point, knotId: string };
-export type Knot = { id: string; points: Point[]; isClosed: boolean; };
+export type Knot = { id: string; points: Point[]; isClosed: boolean; color?: string; };
 export type DrawingData = { knots: Knot[]; interFlipIds: Set<string>; };
 export type IntersectionPoint = Coords2D & {
     linesRatios: Record<string, number> // maps line id to point ratio in line

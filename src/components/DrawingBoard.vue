@@ -26,9 +26,12 @@ import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingKnot from "./DrawingKnot.vue";
 import { computeIntersections, getSvgCoords } from "../utils/drawing";
 import { useMousePressed, useThrottleFn } from "@vueuse/core";
+import { knotsColors } from "../data/colors.ts";
 
 const knots = defineModel<Knot[]>("knots", {
-	default: () => [{ id: "1", points: [], isClosed: false }],
+	default: () => [
+		{ id: "1", points: [], isClosed: false, color: knotsColors[0] },
+	],
 });
 
 const interFlipIds = defineModel<Set<string>>("interFlipIds", {
@@ -86,6 +89,7 @@ function onKnotClose(closed: boolean) {
 			id: (knots.value.length + 1).toString(),
 			points: [],
 			isClosed: false,
+			color: knotsColors[knots.value.length % knotsColors.length],
 		});
 	}
 }

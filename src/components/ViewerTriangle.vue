@@ -7,27 +7,41 @@ import { computed } from "vue";
 import {
 	Mesh,
 	MeshBasicMaterial,
-	DoubleSide,
 	BufferGeometry,
 	BufferAttribute,
+	FrontSide,
+	BackSide,
+	Group,
 } from "three";
+import tinycolor from "tinycolor2";
 const props = defineProps<{
 	points: [number, number, number][];
-	color?: number;
+	color?: string;
 }>();
 
-const material = computed(
-	() =>
-		new MeshBasicMaterial({
-			color: props.color || 0x00ff00,
-			side: DoubleSide,
-		})
-);
 const geometry = computed(() => {
 	const res = new BufferGeometry();
 	const vertices = new Float32Array(props.points.flat());
 	res.setAttribute("position", new BufferAttribute(vertices, 3));
+
 	return res;
 });
-const polygon = computed(() => new Mesh(geometry.value, material.value));
+
+const polygon = computed(() => {
+	const frontMat = new MeshBasicMaterial({
+		color: tinycolor(props.color).darken(10).toHexString(),
+		side: FrontSide,
+	});
+	const backMat = new MeshBasicMaterial({
+		color: props.color,
+		side: BackSide,
+	});
+	const frontMesh = new Mesh(geometry.value, frontMat);
+	const backMesh = new Mesh(geometry.value, backMat);
+
+	const group = new Group();
+	group.add(frontMesh);
+	group.add(backMesh);
+	return group;
+});
 </script>
