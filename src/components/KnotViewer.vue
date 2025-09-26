@@ -3,7 +3,7 @@
 		<TresCanvas>
 			<OrbitControls />
 			<KnotViewerKnot
-				v-for="(knot, i) in filteredKnots"
+				v-for="knot in filteredKnots"
 				:key="knot.id"
 				:knot-id="knot.id"
 				:points="knot.points"
