@@ -71,6 +71,12 @@ function onMouseMove(event: MouseEvent) {
 const addPoint = useThrottleFn((coords: Coords2D) => {
 	const knotId = knots.value[0].id;
 	const pointIndex = knots.value[0].points.length.toString();
+	if (knots.value[0].points.length > 0) {
+		// Rare case of throttle causing duplicate points
+		const prevPoint = knots.value[0].points[knots.value[0].points.length - 1];
+		if (prevPoint.x === coords.x && prevPoint.y === coords.y) return;
+	}
+
 	knots.value[0].points.push({
 		id: `${knotId}-${pointIndex}`,
 		knotId,

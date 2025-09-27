@@ -7,4 +7,5 @@ export default defineConfig({
   plugins: [vue({
     ...templateCompilerOptions
   })],
+  base: '/knot-viewer'
 })

@@ -65,7 +65,10 @@ function onPointClick(index: number) {
 }
 
 function removePoint(index: number) {
-	if (points.value.length <= 1) return;
+	if (points.value.length <= 3) {
+		emit("removeKnot");
+		return;
+	}
 	points.value.splice(index, 1);
 }
 
