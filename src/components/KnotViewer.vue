@@ -7,7 +7,7 @@
 				:key="knot.id"
 				:knot-id="knot.id"
 				:points="knot.points"
-				:allSurfaceLoops="surfaces"
+				:allSurfaceLevels="surfaceLevels"
 				:surfaceColor="knot.knot.color"
 				:showSurfaces="controlsStore.showSurfaces"
 			/>
@@ -36,8 +36,8 @@ import { OrbitControls, Grid } from "@tresjs/cientos";
 import {
 	combineKnotPointsWithIntersections,
 	computeIntersections,
-	getSurfaceLoops,
 } from "../utils/drawing";
+import { getSurfaceLevels } from "../utils/surfaces";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import { useControlsStore } from "../data/controls";
 
@@ -57,10 +57,9 @@ const filteredKnots = computed(() =>
 		}))
 );
 
-const surfaces = computed(() => {
+const surfaceLevels = computed(() => {
 	const allKnotsPoints = filteredKnots.value.map(({ points }) => points).flat();
-	const surfaces = getSurfaceLoops(allKnotsPoints);
-	return surfaces;
+	return getSurfaceLevels(allKnotsPoints);
 });
 
 const intersections = computed(() =>

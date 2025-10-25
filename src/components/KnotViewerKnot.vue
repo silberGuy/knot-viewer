@@ -21,20 +21,20 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import {
-	findPointSurfaceIndex,
-	getKnotIntersectionTriangles,
-	getLoopSurfaceTriangles,
-} from "../utils/drawing";
 import ViewerTriangle from "./ViewerTriangle.vue";
 import { Line2, Sphere } from "@tresjs/cientos";
 import type { KnotDiagramPoint } from "./types";
 import tinycolor from "tinycolor2";
+import {
+	getKnotIntersectionTriangles,
+	getSurfaceLevelTriangles,
+	findPointSurfaceIndex,
+} from "../utils/surfaces";
 
 const props = defineProps<{
 	knotId: string;
 	points: KnotDiagramPoint[];
-	allSurfaceLoops: KnotDiagramPoint[][];
+	allSurfaceLevels: KnotDiagramPoint[][];
 	surfaceColor?: string;
 	showSurfaces: boolean;
 }>();
@@ -54,7 +54,7 @@ const pointsColor = computed(() => {
 });
 
 function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
-	let surfaceIndex = findPointSurfaceIndex(props.allSurfaceLoops, point);
+	let surfaceIndex = findPointSurfaceIndex(props.allSurfaceLevels, point);
 	// TODO: scale and center according to all points in all knots
 	if (surfaceIndex === -1)
 		console.warn("could not find surface for point", point);
@@ -63,17 +63,17 @@ function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
 
 const surfaceTriangles = computed(() => {
 	if (!props.showSurfaces) return [];
-	const surfacesLoops = props.allSurfaceLoops.filter(
+	const surfacesLevels = props.allSurfaceLevels.filter(
 		(surface) => surface[0] && surface[0].knotId === props.knotId
 	);
-	const surfaceTriangles = surfacesLoops
-		.map((loop) => getLoopSurfaceTriangles(loop, get3DCoords))
+	const surfaceTriangles = surfacesLevels
+		.map((level) => getSurfaceLevelTriangles(level, get3DCoords))
 		.flat();
 
 	const interTriangles = getKnotIntersectionTriangles(
 		props.points,
 		get3DCoords,
-		surfacesLoops
+		surfacesLevels
 	);
 
 	const intersectionsNotWithin = props.points.filter(
@@ -82,11 +82,11 @@ const surfaceTriangles = computed(() => {
 	const extraTriangles = intersectionsNotWithin
 		.map((inter) => {
 			const pointIndex = props.points.findIndex((p) => p.id === inter.id);
-			const interSurfaceIndex = findPointSurfaceIndex(surfacesLoops, inter);
+			const interSurfaceIndex = findPointSurfaceIndex(surfacesLevels, inter);
 			const prevPoint = props.points[pointIndex - 1];
 			const nextPoint = props.points[pointIndex + 1];
-			const prevSurfaceIndex = findPointSurfaceIndex(surfacesLoops, prevPoint);
-			const nextSurfaceIndex = findPointSurfaceIndex(surfacesLoops, nextPoint);
+			const prevSurfaceIndex = findPointSurfaceIndex(surfacesLevels, prevPoint);
+			const nextSurfaceIndex = findPointSurfaceIndex(surfacesLevels, nextPoint);
 			if (
 				interSurfaceIndex !== prevSurfaceIndex ||
 				interSurfaceIndex !== nextSurfaceIndex
