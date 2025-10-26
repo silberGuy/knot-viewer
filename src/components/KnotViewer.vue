@@ -6,9 +6,6 @@
 				v-for="knot in knots3D"
 				:knot3D="knot"
 				:key="knot.diagramKnot.id"
-				:knot-id="knot.diagramKnot.id"
-				:points="knot.diagramKnot.points"
-				:allSurfaceLevels="diagram.surfaceLevels"
 				:surfaceColor="knot.diagramKnot.knot.color"
 				:showSurfaces="controlsStore.showSurfaces"
 			/>

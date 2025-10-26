@@ -23,14 +23,11 @@
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
 import { Line2, Sphere } from "@tresjs/cientos";
-import type { Knot3D, KnotDiagramPoint } from "./types";
+import type { Knot3D } from "./types";
 import tinycolor from "tinycolor2";
 
 const props = defineProps<{
 	knot3D: Knot3D;
-	knotId: string;
-	points: KnotDiagramPoint[];
-	allSurfaceLevels: KnotDiagramPoint[][];
 	surfaceColor?: string;
 	showSurfaces: boolean;
 }>();
@@ -50,6 +47,7 @@ const pointsColor = computed(() => {
 });
 
 const triangles3D = computed(() => {
+	if (!props.showSurfaces) return [];
 	return props.knot3D.surfaceTriangles.map(
 		(triangle) =>
 			triangle.map((point) => point.coords) as [
