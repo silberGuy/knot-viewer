@@ -27,10 +27,13 @@ export type KnotDiagramPoint = Coords2D & {
     isIntersectionSep?: boolean;
 }
 
+export type DiagramTriangle = [KnotDiagramPoint, KnotDiagramPoint, KnotDiagramPoint];
+
 export type DiagramKnot = {
     id: string;
     knot: Knot;
     points: KnotDiagramPoint[];
+    surfaceTriangles: DiagramTriangle[];
 }
 
 export type SurfaceLevel = KnotDiagramPoint[];
@@ -40,9 +43,13 @@ export type Diagram = {
     surfaceLevels: SurfaceLevel[];
 }
 
-export type DiagramTriangle = [KnotDiagramPoint, KnotDiagramPoint, KnotDiagramPoint];
-
 export type Knot3DPoint = {
-    id: string;
+    diagramPoint: KnotDiagramPoint;
+    coords: [number, number, number];
+}
 
+export type Knot3D = {
+    diagramKnot: DiagramKnot;
+    points: Knot3DPoint[];
+    surfaceTriangles: [Knot3DPoint, Knot3DPoint, Knot3DPoint][];
 }

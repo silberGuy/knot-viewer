@@ -23,16 +23,11 @@
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
 import { Line2, Sphere } from "@tresjs/cientos";
-import type { KnotDiagramPoint } from "./types";
+import type { Knot3D, KnotDiagramPoint } from "./types";
 import tinycolor from "tinycolor2";
-import {
-	getKnotIntersectionTriangles,
-	getSurfaceLevelTriangles,
-	findPointSurfaceIndex,
-	getIntersectionsNotInKnotTriangles,
-} from "../utils/surfaces";
 
 const props = defineProps<{
+	knot3D: Knot3D;
 	knotId: string;
 	points: KnotDiagramPoint[];
 	allSurfaceLevels: KnotDiagramPoint[][];
@@ -41,7 +36,7 @@ const props = defineProps<{
 }>();
 
 const points3D = computed(() => {
-	return props.points.map((point) => get3DCoords(point));
+	return props.knot3D.points.map((point) => point.coords);
 });
 
 const lineColor = computed(() => {
@@ -54,39 +49,14 @@ const pointsColor = computed(() => {
 	return tinycolor(props.surfaceColor).lighten(20).toString();
 });
 
-function get3DCoords(point: KnotDiagramPoint): [number, number, number] {
-	let surfaceIndex = findPointSurfaceIndex(props.allSurfaceLevels, point);
-	// TODO: scale and center according to all points in all knots
-	if (surfaceIndex === -1)
-		console.warn("could not find surface for point", point);
-	return [point.x / 300, 0.25 * surfaceIndex, point.y / 300];
-}
-
-const surfaceTriangles = computed(() => {
-	if (!props.showSurfaces) return [];
-	const surfacesLevels = props.allSurfaceLevels.filter(
-		(surface) => surface[0] && surface[0].knotId === props.knotId
-	);
-	const surfaceTriangles = surfacesLevels
-		.map((level) => getSurfaceLevelTriangles(level))
-		.flat();
-
-	const interTriangles = getKnotIntersectionTriangles(
-		props.points,
-		surfacesLevels
-	);
-
-	const extraTriangles = getIntersectionsNotInKnotTriangles(
-		props.points,
-		surfacesLevels
-	);
-
-	return [...surfaceTriangles, ...interTriangles, ...extraTriangles];
-});
-
 const triangles3D = computed(() => {
-	return surfaceTriangles.value.map((triangle) =>
-		triangle.map((point) => get3DCoords(point))
+	return props.knot3D.surfaceTriangles.map(
+		(triangle) =>
+			triangle.map((point) => point.coords) as [
+				[number, number, number],
+				[number, number, number],
+				[number, number, number]
+			]
 	);
 });
 </script>

@@ -3,12 +3,13 @@
 		<TresCanvas>
 			<OrbitControls />
 			<KnotViewerKnot
-				v-for="knot in diagram.knots"
-				:key="knot.id"
-				:knot-id="knot.id"
-				:points="knot.points"
+				v-for="knot in knots3D"
+				:knot3D="knot"
+				:key="knot.diagramKnot.id"
+				:knot-id="knot.diagramKnot.id"
+				:points="knot.diagramKnot.points"
 				:allSurfaceLevels="diagram.surfaceLevels"
-				:surfaceColor="knot.knot.color"
+				:surfaceColor="knot.diagramKnot.knot.color"
 				:showSurfaces="controlsStore.showSurfaces"
 			/>
 			<Grid
@@ -35,7 +36,7 @@ import { TresCanvas } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import { useControlsStore } from "../data/controls";
-import { getDiagram } from "../utils/diagram";
+import { get3DKnots, getDiagram } from "../utils/diagram";
 
 const props = defineProps<{
 	drawingData: DrawingData;
@@ -44,4 +45,5 @@ const props = defineProps<{
 const controlsStore = useControlsStore();
 
 const diagram = computed(() => getDiagram(props.drawingData));
+const knots3D = computed(() => get3DKnots(diagram.value));
 </script>
