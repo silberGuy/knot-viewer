@@ -1,4 +1,4 @@
-import type { Coords2D, Intersection, Knot, KnotDiagramPoint, Line, Point } from "../components/types";
+import type { Coords2D, DiagramKnot, DrawingData, Intersection, Knot, KnotDiagramPoint, Line, Point } from "../components/types";
 
 const CLOSING_POINT_ID = 'closing-point';
 
@@ -192,4 +192,15 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
         }
     }
     return points;
+}
+
+export function getDiagramKnots(drawingData: DrawingData): DiagramKnot[] {
+    const intersections = computeIntersections(drawingData.knots, drawingData.interFlipIds);
+    return drawingData.knots
+        .filter((knot) => knot.points.length > 2)
+        .map((knot, index) => ({
+            knot,
+            id: knot.id || (index + 1).toString(),
+            points: combineKnotPointsWithIntersections(knot, intersections),
+        }))
 }

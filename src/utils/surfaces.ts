@@ -1,5 +1,6 @@
 import { Earcut } from "three/src/extras/Earcut.js";
-import type { Intersection, KnotDiagramPoint } from "../components/types";
+import type { DiagramTriangle, Intersection, KnotDiagramPoint, SurfaceLevel } from "../components/types";
+import { Ray, Vector3 } from "three";
 
 function getIntersectionOrientationSign(intersection: Intersection) {
     const v1x = intersection.topLine.p2.x - intersection.topLine.p1.x
@@ -18,7 +19,7 @@ export function getSurfaceLevels(points: KnotDiagramPoint[]) {
     if (new Set(points.map(p => p.id)).size < points.length) {
         throw new Error("points must have unique ids");
     }
-    const surfaceLevels: KnotDiagramPoint[][] = [];
+    const surfaceLevels: SurfaceLevel[] = [];
     const visited = new Set<string>();
 
     const startPoint = points[0];
@@ -106,28 +107,26 @@ export function getSurfaceLevels(points: KnotDiagramPoint[]) {
     return surfaceLevels.filter(level => level.length > 0);
 }
 
-export function getSurfaceLevelTriangles(points: KnotDiagramPoint[], to3D: (p: KnotDiagramPoint, i: number) => [number, number, number]) {
+export function getSurfaceLevelTriangles(points: KnotDiagramPoint[]) {
     if (points.length < 3) return [];
     const filteredPoints = points;
-    const points3D = filteredPoints.map(p => to3D(p, filteredPoints.indexOf(p)));
-    const points2D = points3D.map(([x, _z, y]) => ([x, y]));
+    const points2D = filteredPoints.map((p) => ([p.x, p.y]));
     const cut = Earcut.triangulate(points2D.flat(), [], 2);
-    const triangles: [number, number, number][][] = [];
+    const triangles: DiagramTriangle[] = [];
     for (let i = 0; i < cut.length; i += 3) {
         const [a, b, c] = cut.slice(i, i + 3).sort((x, y) => x - y);
         triangles.push([
-            points3D[a],
-            points3D[b],
-            points3D[c],
-            points3D[a],
+            filteredPoints[a],
+            filteredPoints[b],
+            filteredPoints[c],
         ]);
     }
     return triangles;
 }
 
-export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (p: KnotDiagramPoint, i: number) => [number, number, number], surfaces: KnotDiagramPoint[][]) {
+export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], surfaces: KnotDiagramPoint[][]) {
     const visitedIntersections = new Set<string>();
-    const intersectionTriangles: [number, number, number][][] = [];
+    const intersectionTriangles: DiagramTriangle[] = [];
     const getSurfaceIndex = findPointSurfaceIndex.bind(null, surfaces);
 
     // TODO: skip intersections of different knots
@@ -148,14 +147,56 @@ export function getKnotIntersectionTriangles(points: KnotDiagramPoint[], to3D: (
             visitedIntersections.add(p1.id);
             visitedIntersections.add(p3.id);
             if (!p2 || !p4) throw new Error(`could not calculate loop for intersection: ${point.intersection.id}`);
-            const renderPoints = [to3D(p1, i), to3D(p2, i + dir), to3D(p3, p1ParallelIndex), to3D(p4, p1ParallelIndex + dir)];
-            intersectionTriangles.push([
-                renderPoints[3], renderPoints[0], renderPoints[2],
-            ]);
-            intersectionTriangles.push([
-                renderPoints[1], renderPoints[0], renderPoints[2],
-            ].reverse());
+            intersectionTriangles.push([p4, p1, p3]);
+            intersectionTriangles.push([p3, p1, p2]);
         }
     }
     return intersectionTriangles;
+}
+
+export function getIntersectionsNotInKnotTriangles(points: KnotDiagramPoint[], surfacesLevels: KnotDiagramPoint[][]) {
+    const intersectionsNotWithin = points.filter(
+        (point) => point.intersection && !point.intersection.isWithinKnot
+    );
+    return intersectionsNotWithin
+        .map((inter) => {
+            const pointIndex = points.findIndex((p) => p.id === inter.id);
+            const interSurfaceIndex = findPointSurfaceIndex(surfacesLevels, inter);
+            const prevPoint = points[pointIndex - 1];
+            const nextPoint = points[pointIndex + 1];
+            const prevSurfaceIndex = findPointSurfaceIndex(surfacesLevels, prevPoint);
+            const nextSurfaceIndex = findPointSurfaceIndex(surfacesLevels, nextPoint);
+            if (
+                interSurfaceIndex !== prevSurfaceIndex ||
+                interSurfaceIndex !== nextSurfaceIndex
+            ) {
+                return [
+                    points[pointIndex - 1],
+                    inter,
+                    points[pointIndex + 1],
+                ];
+            }
+        })
+        .filter((t): t is DiagramTriangle => !!t);
+}
+
+type Point3D = [number, number, number];
+type T2Points = [Point3D, Point3D];
+type T3Points = [Point3D, Point3D, Point3D];
+export function getTriangleLineIntersection(triangle: T3Points, line: T2Points) {
+    const B = new Vector3(...triangle[0])
+    const A = new Vector3(...triangle[1])
+    const C = new Vector3(...triangle[2])
+    const P1 = new Vector3(...line[0])
+    const P2 = new Vector3(...line[1])
+
+    const dir = new Vector3().subVectors(P2, P1).normalize()
+    const ray = new Ray(P1, dir)
+
+    const intersection = ray.intersectTriangle(A, B, C, false, new Vector3())
+    if (intersection) {
+        return [intersection.x, intersection.y, intersection.z];
+    }
+
+    return null;
 }

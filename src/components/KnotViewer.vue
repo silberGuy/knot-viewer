@@ -3,11 +3,11 @@
 		<TresCanvas>
 			<OrbitControls />
 			<KnotViewerKnot
-				v-for="knot in filteredKnots"
+				v-for="knot in diagram.knots"
 				:key="knot.id"
 				:knot-id="knot.id"
 				:points="knot.points"
-				:allSurfaceLevels="surfaceLevels"
+				:allSurfaceLevels="diagram.surfaceLevels"
 				:surfaceColor="knot.knot.color"
 				:showSurfaces="controlsStore.showSurfaces"
 			/>
@@ -33,13 +33,9 @@ import { computed } from "vue";
 import type { DrawingData } from "./types";
 import { TresCanvas } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
-import {
-	combineKnotPointsWithIntersections,
-	computeIntersections,
-} from "../utils/drawing";
-import { getSurfaceLevels } from "../utils/surfaces";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import { useControlsStore } from "../data/controls";
+import { getDiagram } from "../utils/diagram";
 
 const props = defineProps<{
 	drawingData: DrawingData;
@@ -47,22 +43,5 @@ const props = defineProps<{
 
 const controlsStore = useControlsStore();
 
-const filteredKnots = computed(() =>
-	props.drawingData.knots
-		.filter((knot) => knot.points.length > 2)
-		.map((knot, index) => ({
-			knot,
-			id: knot.id || (index + 1).toString(),
-			points: combineKnotPointsWithIntersections(knot, intersections.value),
-		}))
-);
-
-const surfaceLevels = computed(() => {
-	const allKnotsPoints = filteredKnots.value.map(({ points }) => points).flat();
-	return getSurfaceLevels(allKnotsPoints);
-});
-
-const intersections = computed(() =>
-	computeIntersections(props.drawingData.knots, props.drawingData.interFlipIds)
-);
+const diagram = computed(() => getDiagram(props.drawingData));
 </script>

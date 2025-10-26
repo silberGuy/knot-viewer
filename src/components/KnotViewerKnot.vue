@@ -12,7 +12,7 @@
 		:color="pointsColor"
 	/>
 	<ViewerTriangle
-		v-for="triangle in surfaceTriangles"
+		v-for="triangle in triangles3D"
 		:points="triangle"
 		:key="triangle.flat().join('_')"
 		:color="surfaceColor"
@@ -29,6 +29,7 @@ import {
 	getKnotIntersectionTriangles,
 	getSurfaceLevelTriangles,
 	findPointSurfaceIndex,
+	getIntersectionsNotInKnotTriangles,
 } from "../utils/surfaces";
 
 const props = defineProps<{
@@ -67,39 +68,25 @@ const surfaceTriangles = computed(() => {
 		(surface) => surface[0] && surface[0].knotId === props.knotId
 	);
 	const surfaceTriangles = surfacesLevels
-		.map((level) => getSurfaceLevelTriangles(level, get3DCoords))
+		.map((level) => getSurfaceLevelTriangles(level))
 		.flat();
 
 	const interTriangles = getKnotIntersectionTriangles(
 		props.points,
-		get3DCoords,
 		surfacesLevels
 	);
 
-	const intersectionsNotWithin = props.points.filter(
-		(point) => point.intersection && !point.intersection.isWithinKnot
+	const extraTriangles = getIntersectionsNotInKnotTriangles(
+		props.points,
+		surfacesLevels
 	);
-	const extraTriangles = intersectionsNotWithin
-		.map((inter) => {
-			const pointIndex = props.points.findIndex((p) => p.id === inter.id);
-			const interSurfaceIndex = findPointSurfaceIndex(surfacesLevels, inter);
-			const prevPoint = props.points[pointIndex - 1];
-			const nextPoint = props.points[pointIndex + 1];
-			const prevSurfaceIndex = findPointSurfaceIndex(surfacesLevels, prevPoint);
-			const nextSurfaceIndex = findPointSurfaceIndex(surfacesLevels, nextPoint);
-			if (
-				interSurfaceIndex !== prevSurfaceIndex ||
-				interSurfaceIndex !== nextSurfaceIndex
-			) {
-				return [
-					get3DCoords(props.points[pointIndex - 1]),
-					get3DCoords(inter),
-					get3DCoords(props.points[pointIndex + 1]),
-				];
-			}
-		})
-		.filter((t): t is [number, number, number][] => !!t);
 
 	return [...surfaceTriangles, ...interTriangles, ...extraTriangles];
+});
+
+const triangles3D = computed(() => {
+	return surfaceTriangles.value.map((triangle) =>
+		triangle.map((point) => get3DCoords(point))
+	);
 });
 </script>

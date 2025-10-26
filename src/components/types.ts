@@ -16,6 +16,8 @@ export type Intersection = {
     isFlipped: boolean;
     isWithinKnot: boolean;
 }
+
+// Note: Diagram means that it is in 2D but after calculating intersections and adding extra points
 export type KnotDiagramPoint = Coords2D & {
     id: string;
     knotId: string;
@@ -23,4 +25,24 @@ export type KnotDiagramPoint = Coords2D & {
     intersectionParallelId?: string;
     isTop?: boolean;
     isIntersectionSep?: boolean;
+}
+
+export type DiagramKnot = {
+    id: string;
+    knot: Knot;
+    points: KnotDiagramPoint[];
+}
+
+export type SurfaceLevel = KnotDiagramPoint[];
+
+export type Diagram = {
+    knots: DiagramKnot[];
+    surfaceLevels: SurfaceLevel[];
+}
+
+export type DiagramTriangle = [KnotDiagramPoint, KnotDiagramPoint, KnotDiagramPoint];
+
+export type Knot3DPoint = {
+    id: string;
+
 }
