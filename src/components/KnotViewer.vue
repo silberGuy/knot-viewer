@@ -3,7 +3,7 @@
 		<TresCanvas>
 			<OrbitControls />
 			<KnotViewerKnot
-				v-for="knot in knots3D"
+				v-for="knot in subSurfaceKnots"
 				:knot3D="knot"
 				:key="knot.diagramKnot.id"
 				:surfaceColor="knot.diagramKnot.knot.color"
@@ -34,6 +34,7 @@ import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import { useControlsStore } from "../data/controls";
 import { get3DKnots, getDiagram } from "../utils/diagram";
+import { combineKnotPointsWithSurfaceIntersections } from "../utils/sub-surfaces";
 
 const props = defineProps<{
 	drawingData: DrawingData;
@@ -43,4 +44,9 @@ const controlsStore = useControlsStore();
 
 const diagram = computed(() => getDiagram(props.drawingData));
 const knots3D = computed(() => get3DKnots(diagram.value));
+const subSurfaceKnots = computed(() => {
+	return knots3D.value.map((knot) =>
+		combineKnotPointsWithSurfaceIntersections(knot, knots3D.value)
+	);
+});
 </script>

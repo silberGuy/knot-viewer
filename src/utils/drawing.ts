@@ -1,4 +1,4 @@
-import type { Coords2D, DiagramKnot, DrawingData, Intersection, Knot, KnotDiagramPoint, Line, Point } from "../components/types";
+import type { Coords2D, DiagramKnot, DrawingData, Intersection, Knot, DiagramPoint, Line, Point } from "../components/types";
 
 const CLOSING_POINT_ID = 'closing-point';
 
@@ -35,7 +35,7 @@ export function getKnotLines(knot: Knot): Line[] {
     return linePoints;
 }
 
-export function getIntersection(line1: Line, line2: Line) {
+function getIntersection(line1: Line, line2: Line) {
     // Check if the lines share an endpoint (i.e., are adjacent edges)
     if (
         line1.p1 === line2.p1 ||
@@ -127,13 +127,13 @@ export function getSvgCoords(event: MouseEvent, svg: SVGSVGElement): Coords2D | 
     return null;
 }
 
-export function combineKnotPointsWithIntersections(knot: Knot, intersections: Intersection[]): KnotDiagramPoint[] {
+export function combineKnotPointsWithIntersections(knot: Knot, intersections: Intersection[]): DiagramPoint[] {
     const knotId = knot.id;
     const knotIntersections = intersections.filter(
         (inter) =>
             inter.topLineKnotId === knotId || inter.bottomLineKnotId === knotId
     );
-    let points: KnotDiagramPoint[] = [...knot.points];
+    let points: DiagramPoint[] = [...knot.points];
     if (knot.isClosed && points.length > 2) {
         points.push(createClosingPoint(points, knot.id));
     }
@@ -173,14 +173,14 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
         if (points[i].intersection) {
             const prevPoint = points[i - 1] || points[points.length - 1];
             const nextPoint = points[i + 1] || points[0];
-            const beforePoint: KnotDiagramPoint = {
+            const beforePoint: DiagramPoint = {
                 id: `pre-${points[i].id}`,
                 x: (points[i].x + prevPoint.x) / 2,
                 y: (points[i].y + prevPoint.y) / 2,
                 isIntersectionSep: true,
                 knotId: knot.id,
             }
-            const afterPoint: KnotDiagramPoint = {
+            const afterPoint: DiagramPoint = {
                 id: `post-${points[i].id}`,
                 x: (points[i].x + nextPoint.x) / 2,
                 y: (points[i].y + nextPoint.y) / 2,

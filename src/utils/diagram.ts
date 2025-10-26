@@ -1,4 +1,4 @@
-import type { Diagram, DiagramKnot, DiagramTriangle, DrawingData, Knot3D, Knot3DPoint, KnotDiagramPoint, SurfaceLevel } from "../components/types";
+import type { Diagram, DiagramKnot, DiagramTriangle, DrawingData, Knot3D, Point3D, DiagramPoint, SurfaceLevel } from "../components/types";
 import { combineKnotPointsWithIntersections, computeIntersections } from "./drawing";
 import { findPointSurfaceIndex, getIntersectionsNotInKnotTriangles, getKnotIntersectionTriangles, getSurfaceLevels, getSurfaceLevelTriangles } from "./surfaces";
 
@@ -71,12 +71,13 @@ function minimizeSurfaceLevels(surfaceLevels: SurfaceLevel[]): SurfaceLevel[] {
     return minimizeSurfaceLevels;
 }
 
-function get3DPoint(point: KnotDiagramPoint, surfaceLevels: SurfaceLevel[]): Knot3DPoint {
+function get3DPoint(point: DiagramPoint, surfaceLevels: SurfaceLevel[]): Point3D {
     let surfaceIndex = findPointSurfaceIndex(surfaceLevels, point);
     // TODO: scale and center according to all points in all knots
     if (surfaceIndex === -1)
         console.warn("could not find surface for point", point);
     return {
+        id: point.id,
         diagramPoint: point,
         coords: [point.x / 300, 0.25 * surfaceIndex, point.y / 300]
     };
@@ -88,7 +89,10 @@ export function get3DKnots(diagram: Diagram): Knot3D[] {
         diagramKnot: knot,
         points: knot.points.map(point => get3DPoint(point, surfaceLevels)),
         surfaceTriangles: knot.surfaceTriangles.map(
-            triangle => triangle.map(point => get3DPoint(point, surfaceLevels)) as [Knot3DPoint, Knot3DPoint, Knot3DPoint]
+            triangle => ({
+                ...triangle,
+                points: triangle.points.map(point => get3DPoint(point, surfaceLevels)) as [Point3D, Point3D, Point3D]
+            })
         ),
     }));
 }

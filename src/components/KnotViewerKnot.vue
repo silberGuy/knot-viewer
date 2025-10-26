@@ -50,7 +50,7 @@ const triangles3D = computed(() => {
 	if (!props.showSurfaces) return [];
 	return props.knot3D.surfaceTriangles.map(
 		(triangle) =>
-			triangle.map((point) => point.coords) as [
+			triangle.points.map((point) => point.coords) as [
 				[number, number, number],
 				[number, number, number],
 				[number, number, number]
