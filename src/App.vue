@@ -8,9 +8,10 @@
 		<DrawingBoard
 			v-model:knots="drawingData.knots"
 			v-model:interFlipIds="drawingData.interFlipIds"
+			@rerender="updateViewerData"
 		/>
 		<KnotViewer
-			:drawingData="drawingData"
+			:drawingData="drawingDataForViewer"
 			:key="drawingData.knots.map((knot) => knot.id).join('-')"
 		/>
 	</div>
@@ -18,6 +19,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import cloneDeep from "clone-deep";
 import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
@@ -29,9 +31,16 @@ const drawingData = ref<DrawingData>({
 	interFlipIds: new Set<string>(),
 });
 
+const drawingDataForViewer = ref<DrawingData>(cloneDeep(drawingData.value));
+
 function onLoadData(value: DrawingData) {
 	console.log(value);
 	drawingData.value = value;
+	updateViewerData();
+}
+
+function updateViewerData() {
+	drawingDataForViewer.value = cloneDeep(drawingData.value);
 }
 </script>
 

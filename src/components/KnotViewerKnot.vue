@@ -1,15 +1,9 @@
 <template>
-	<Line2
-		:points="points3D"
-		:key="points3D.flat().join('_')"
-		:lineWidth="4"
+	<ViewerLine
+		:points="knot.points"
 		:color="lineColor"
-	/>
-	<Sphere
-		v-for="point in points3D"
-		:args="[0.02, 0.02, 0.02]"
-		:position="point"
-		:color="pointsColor"
+		:pointsColor="pointsColor"
+		:width="lineWidth"
 	/>
 	<ViewerTriangle
 		v-for="triangle in triangles3D"
@@ -17,24 +11,34 @@
 		:key="triangle.flat().join('_')"
 		:color="surfaceColor"
 	/>
+	<!-- <ViewerLine
+		v-for="triangle in knot.surfaceTriangles"
+		:key="
+			triangle.id +
+			triangle.points
+				.map((p) => p.coords)
+				.flat()
+				.join('_')
+		"
+		:points="triangle.points"
+		color="#777777"
+		pointsColor="#666666"
+	/> -->
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import { Line2, Sphere } from "@tresjs/cientos";
-import type { Knot3D } from "./types";
+import type { Knot3D, SubSurfacesKnot } from "./types";
 import tinycolor from "tinycolor2";
+import ViewerLine from "./ViewerLine.vue";
 
 const props = defineProps<{
-	knot3D: Knot3D;
+	knot: Knot3D | SubSurfacesKnot;
 	surfaceColor?: string;
 	showSurfaces: boolean;
+	lineWidth?: number;
 }>();
-
-const points3D = computed(() => {
-	return props.knot3D.points.map((point) => point.coords);
-});
 
 const lineColor = computed(() => {
 	if (props.showSurfaces) return 0xffffff;
@@ -48,7 +52,7 @@ const pointsColor = computed(() => {
 
 const triangles3D = computed(() => {
 	if (!props.showSurfaces) return [];
-	return props.knot3D.surfaceTriangles.map(
+	return props.knot.surfaceTriangles.map(
 		(triangle) =>
 			triangle.points.map((point) => point.coords) as [
 				[number, number, number],

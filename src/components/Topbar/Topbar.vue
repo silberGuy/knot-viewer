@@ -25,6 +25,15 @@
 			/>
 			Show Surfaces
 		</label>
+
+		<label style="user-select: none">
+			<input
+				type="checkbox"
+				id="toggle-surfaces"
+				v-model="controlsStore.showSurfacesIntersections"
+			/>
+			Show Surfaces Intersections
+		</label>
 	</div>
 </template>
 

@@ -64,11 +64,15 @@ export type Knot3D = {
 }
 
 
-type SubSurfacesPoint = {
+export type SubSurfacesPoint = {
     id: string;
     coords: [number, number, number];
     surfaceIntersection?: {
         triangle: Triangle3D;
+        lineP1: Point3D;
+        lineP2: Point3D;
+        twinPointKnotId?: string;
+        twinPointId?: string;
     };
 }
 

@@ -20,6 +20,7 @@
 		@moveKnot="onMoveKnot"
 		@click.alt.stop="removePoint(index)"
 		@click.shift.alt.stop="emit('removeKnot')"
+		@dragEnd="emit('dragEnd')"
 	/>
 </template>
 
@@ -37,6 +38,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
 	(event: "removeKnot"): void;
+	(event: "dragEnd"): void;
 }>();
 
 const points = defineModel<Point[]>("points", {

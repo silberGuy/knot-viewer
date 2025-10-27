@@ -20,6 +20,7 @@ const coords = defineModel<Coords2D>("coords", {
 });
 
 const emit = defineEmits<{
+	(event: "dragEnd"): void;
 	(event: "moveKnot", delta: Coords2D): void;
 }>();
 
@@ -63,6 +64,9 @@ useDraggable(el, {
 				coords.value = { x: svgPoint.x, y: svgPoint.y };
 			}
 		}
+	},
+	onEnd() {
+		emit("dragEnd");
 	},
 });
 </script>

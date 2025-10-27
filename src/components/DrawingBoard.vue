@@ -10,6 +10,7 @@
 				v-model:isClosed="knot.isClosed"
 				@update:isClosed="onKnotClose"
 				@removeKnot="onRemoveKnot(index)"
+				@dragEnd="emit('rerender')"
 			/>
 			<DrawingIntersection
 				v-for="inter in linesIntersections"
@@ -38,6 +39,10 @@ const knots = defineModel<Knot[]>("knots", {
 		{ id: "1", points: [], isClosed: false, color: knotsColors[0] },
 	],
 });
+
+const emit = defineEmits<{
+	(event: "rerender"): void;
+}>();
 
 const knotDrawn = ref(1);
 
@@ -82,6 +87,7 @@ const addPoint = useThrottleFn((coords: Coords2D) => {
 		knotId,
 		...coords,
 	});
+	emit("rerender");
 }, 100);
 
 const linesIntersections = computed(() =>
@@ -94,23 +100,31 @@ function flipIntersection(intersectionId: string) {
 	} else {
 		interFlipIds.value.add(intersectionId);
 	}
+	emit("rerender");
+}
+
+function addEmptyKnot() {
+	knots.value.unshift({
+		id: (knotDrawn.value + 1).toString(),
+		points: [],
+		isClosed: false,
+		color: knotsColors[knotDrawn.value % knotsColors.length],
+	});
+	knotDrawn.value += 1;
 }
 
 function onKnotClose(closed: boolean) {
 	if (closed) {
-		knots.value.unshift({
-			id: (knotDrawn.value + 1).toString(),
-			points: [],
-			isClosed: false,
-			color: knotsColors[knotDrawn.value % knotsColors.length],
-		});
-		knotDrawn.value += 1;
+		addEmptyKnot();
 	}
+	emit("rerender");
 }
 
 function onRemoveKnot(index: number) {
 	if (knots.value.length <= 1) return;
 	knots.value.splice(index, 1);
+	addEmptyKnot();
+	emit("rerender");
 }
 </script>
 
