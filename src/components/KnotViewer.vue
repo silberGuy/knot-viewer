@@ -1,6 +1,12 @@
 <template>
 	<div class="knot-viewer">
 		<TresCanvas>
+			<TresPerspectiveCamera
+				:position="[5, 5, 10]"
+				:fov="50"
+				:near="0.1"
+				:far="1000"
+			/>
 			<OrbitControls />
 			<KnotViewerKnot
 				v-for="knot in knots3D"

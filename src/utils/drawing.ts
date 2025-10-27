@@ -1,4 +1,4 @@
-import type { Coords2D, DiagramKnot, DrawingData, Intersection, Knot, DiagramPoint, Line, Point } from "../components/types";
+import type { Coords2D, Intersection, Knot, DiagramPoint, Line, Point } from "../components/types";
 
 const CLOSING_POINT_ID = 'closing-point';
 

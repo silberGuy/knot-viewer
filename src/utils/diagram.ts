@@ -73,13 +73,13 @@ function minimizeSurfaceLevels(surfaceLevels: SurfaceLevel[]): SurfaceLevel[] {
 
 function get3DPoint(point: DiagramPoint, surfaceLevels: SurfaceLevel[]): Point3D {
     let surfaceIndex = findPointSurfaceIndex(surfaceLevels, point);
-    // TODO: scale and center according to all points in all knots
     if (surfaceIndex === -1)
         console.warn("could not find surface for point", point);
+    // TODO: scale and center according to all points in all knots
     return {
         id: point.id,
         diagramPoint: point,
-        coords: [point.x / 300, 0.25 * surfaceIndex, point.y / 300]
+        coords: [point.x / 100 - 2, 0.3 * surfaceIndex, point.y / 100 - 2]
     };
 }
 
