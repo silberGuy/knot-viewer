@@ -16,7 +16,7 @@ export function findPointSurfaceIndex(surfaces: DiagramPoint[][], point: Diagram
 
 export function getSurfaceLevels(points: DiagramPoint[]) {
     if (new Set(points.map(p => p.id)).size < points.length) {
-        throw new Error("points must have unique ids");
+        console.error("points must have unique ids");
     }
     const surfaceLevels: SurfaceLevel[] = [];
     const visited = new Set<string>();
@@ -31,6 +31,7 @@ export function getSurfaceLevels(points: DiagramPoint[]) {
         if (nextPoint.knotId !== point.knotId) {
             return null;
         }
+
         if (point.intersection?.isWithinKnot) {
             const parallelIndex = points.findIndex(p => p.id === point.intersectionParallelId);
             if (passedIntersections.has(point.intersection.id)) {
