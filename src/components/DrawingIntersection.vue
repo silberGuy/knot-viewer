@@ -6,6 +6,12 @@
 			:r="length / 2"
 			fill="white"
 		/>
+		<circle
+			:cx="intersectionPoint.x"
+			:cy="intersectionPoint.y"
+			:r="length * 1.5"
+			fill="transparent"
+		/>
 		<line
 			class="drawing-line"
 			:x1="shortLinePoint1.x"
