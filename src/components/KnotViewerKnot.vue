@@ -29,12 +29,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { Knot3D, SubSurfacesKnot } from "./types";
+import type { Knot3D, SubSurface, SubSurfacesKnot } from "./types";
 import tinycolor from "tinycolor2";
 import ViewerLine from "./ViewerLine.vue";
 
 const props = defineProps<{
-	knot: Knot3D | SubSurfacesKnot;
+	knot: Knot3D | SubSurfacesKnot | SubSurface;
 	surfaceColor?: string;
 	showSurfaces: boolean;
 	lineWidth?: number;

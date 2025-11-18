@@ -1,5 +1,6 @@
 <template>
 	<circle
+		:id="id"
 		ref="el"
 		class="point"
 		:cx="coords.x"

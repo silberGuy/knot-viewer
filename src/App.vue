@@ -58,8 +58,8 @@ function getCenteredData(data: DrawingData): DrawingData {
 	const knots = data.knots.map((knot) => {
 		const points = knot.points.map((pt) => ({
 			...pt,
-			x: pt.x - offsetX,
-			y: pt.y - offsetY,
+			x: (pt.x - offsetX) / 2,
+			y: (pt.y - offsetY) / 2,
 		}));
 		return { ...knot, points };
 	});

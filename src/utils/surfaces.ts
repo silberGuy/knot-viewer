@@ -120,13 +120,12 @@ function createTriangle(p1: DiagramPoint, p2: DiagramPoint, p3: DiagramPoint): D
 
 export function getSurfaceLevelTriangles(points: DiagramPoint[]): DiagramTriangle[] {
     if (points.length < 3) return [];
-    const filteredPoints = points;
-    const points2D = filteredPoints.map((p) => ([p.x, p.y]));
+    const points2D = points.map((p) => ([p.x, p.y]));
     const cut = Earcut.triangulate(points2D.flat(), [], 2);
     const triangles: DiagramTriangle[] = [];
     for (let i = 0; i < cut.length; i += 3) {
         const [a, b, c] = cut.slice(i, i + 3).sort((x, y) => x - y);
-        triangles.push(createTriangle(filteredPoints[a], filteredPoints[b], filteredPoints[c]));
+        triangles.push(createTriangle(points[a], points[b], points[c]));
     }
     return triangles;
 }

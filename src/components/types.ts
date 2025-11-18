@@ -69,6 +69,7 @@ export type SubSurfacesPoint = {
     coords: [number, number, number];
     surfaceIntersection?: {
         triangle: Triangle3D;
+        otherTriangle: Triangle3D;
         lineP1: Point3D;
         lineP2: Point3D;
         twinPointKnotId?: string;
@@ -79,3 +80,6 @@ export type SubSurfacesPoint = {
 export type SubSurfacesKnot = Omit<Knot3D, 'points'> & {
     points: SubSurfacesPoint[];
 }
+
+// The actual subsurface loop that is not originated from the drawing
+export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot'>

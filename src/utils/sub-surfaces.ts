@@ -1,5 +1,10 @@
 import { Ray, Vector3 } from "three";
-import type { Knot3D, Point3D, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+
+function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
+    const v = new Vector3(...a.coords);
+    return v.distanceTo(new Vector3(...b.coords)) < epsilon;
+}
 
 function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point3D]) {
     const B = new Vector3(...triangle.points[0].coords)
@@ -19,7 +24,27 @@ function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point
     return null;
 }
 
-function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: Triangle3D): SubSurfacesPoint[] {
+function deduplicatePoints(points: SubSurfacesPoint[], epsilon = 0.01) {
+    const unique: SubSurfacesPoint[] = [];
+
+    for (const p of points) {
+        const v = new Vector3(...p.coords);
+        const isClose = unique.some(u => v.distanceTo(new Vector3(...u.coords)) < epsilon);
+        if (!isClose) unique.push(p);
+    }
+
+    return unique;
+}
+
+function getPointsIndexesDistanceInKnot(pointA: Point3D, pointB: Point3D, knot: Knot3D) {
+    const indexA = knot.points.findIndex(p => p.id === pointA.id);
+    const indexB = knot.points.findIndex(p => p.id === pointB.id);
+    if (indexA === -1 || indexB === -1) return Infinity;
+
+    return (indexA - indexB) % knot.points.length;
+}
+
+function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: Triangle3D, knots: Knot3D[]): SubSurfacesPoint[] {
     const intersections: SubSurfacesPoint[] = [];
 
     const edges1 = [
@@ -28,15 +53,22 @@ function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: T
         [triangle1.points[2], triangle1.points[0]],
     ] as [Point3D, Point3D][];
 
+    const triangle1Knot = knots.find(k => k.diagramKnot.id === triangle1.knotId);
+    edges1.sort((a, b) => {
+        return Math.abs(getPointsIndexesDistanceInKnot(a[0], a[1], triangle1Knot!)) - Math.abs(getPointsIndexesDistanceInKnot(b[0], b[1], triangle1Knot!));
+    })
+
     for (const [p1, p2] of edges1) {
         const intersection = getTriangleLineIntersection(triangle2, [p1, p2]);
         if (intersection) {
+            const sortedByKnotPoints = [p1, p2].sort((a, b) => -getPointsIndexesDistanceInKnot(a, b, triangle1Knot!));
             const newPoint = {
                 id: `subsurface-inter-${p1.diagramPoint.id}-${p2.diagramPoint.id}-${triangle2.id}`,
                 surfaceIntersection: {
-                    triangle: triangle2,
-                    lineP1: p1,
-                    lineP2: p2,
+                    triangle: triangle1,
+                    otherTriangle: triangle2,
+                    lineP1: sortedByKnotPoints[0],
+                    lineP2: sortedByKnotPoints[1],
                 },
                 coords: intersection as [number, number, number],
             }
@@ -44,29 +76,25 @@ function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: T
         }
     }
 
-    // NOTE: when the triangles intersect exactly at a vertex, we get duplicate points
-    while (intersections.length > 1 && new Vector3(...intersections[0].coords).distanceToSquared(new Vector3(...intersections[1].coords)) < 0.001) {
-        intersections.pop();
-    }
-
-    return intersections;
+    // often the triangle edge is the intersection, causing duplicate points
+    return deduplicatePoints(intersections);
 }
 
-function getTrianglesIntersections(triangle1: Triangle3D, triangle2: Triangle3D): SubSurfacesPoint[] {
-    const points1 = getTrianglesIntersectionsAsymmetric(triangle1, triangle2);
-    const points2 = getTrianglesIntersectionsAsymmetric(triangle2, triangle1);
+function getTrianglesIntersections(triangle1: Triangle3D, triangle2: Triangle3D, knots: Knot3D[]): SubSurfacesPoint[] {
+    const points1 = getTrianglesIntersectionsAsymmetric(triangle1, triangle2, knots);
+    const points2 = getTrianglesIntersectionsAsymmetric(triangle2, triangle1, knots);
     const points = [...points1, ...points2];
     if (points.length < 2) return [];
 
     if (points.length !== 2) {
         console.warn(points1, points2);
-        throw new Error(`Triangles intersections should result in 0 or 2 intersection points, found: ${points.length}`);
+        console.error(`Triangles intersections should result in 0 or 2 intersection points, found: ${points.length}`);
     }
 
-    points[0].surfaceIntersection!.twinPointKnotId = points1.includes(points[0]) ? triangle2.knotId : triangle1.knotId;
     points[0].surfaceIntersection!.twinPointId = points[1].id;
-    points[1].surfaceIntersection!.twinPointKnotId = points1.includes(points[1]) ? triangle1.knotId : triangle2.knotId;
+    points[0].surfaceIntersection!.twinPointKnotId = points[1].surfaceIntersection?.triangle.knotId;
     points[1].surfaceIntersection!.twinPointId = points[0].id;
+    points[1].surfaceIntersection!.twinPointKnotId = points[0].surfaceIntersection?.triangle.knotId;
 
     return points;
 }
@@ -79,10 +107,12 @@ function injectSubSurfaceIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SubSur
         const nextPoint = knot.points[i + 1];
 
         resultPoints.push(point);
-        const intersectionsBetweenPoints = pointsToAdd.filter(p => {
-            const linePoints = [p.surfaceIntersection?.lineP1.id, p.surfaceIntersection?.lineP2.id];
-            return nextPoint && linePoints.includes(point.id) && linePoints.includes(nextPoint.id);
-        })
+        // THE PROBLEM IS HERE: (
+        const intersectionsBetweenPoints = pointsToAdd.filter(p => p.surfaceIntersection?.lineP1.id === point.id)
+            //  {
+            //     const linePoints = [p.surfaceIntersection?.lineP1.id, p.surfaceIntersection?.lineP2.id];
+            //     return nextPoint && linePoints.includes(point.id) && linePoints.includes(nextPoint.id);
+            // })
             .sort((a, b) => {
                 const aDist = new Vector3(...a.coords).distanceToSquared(new Vector3(...point.coords));
                 const bDist = new Vector3(...b.coords).distanceToSquared(new Vector3(...point.coords));
@@ -97,7 +127,7 @@ function injectSubSurfaceIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SubSur
 }
 
 export function getKnotsSurfacesIntersections(knots: Knot3D[]): SubSurfacesPoint[] {
-    const intersections = [] as SubSurfacesKnot["points"];
+    const intersections = new Set<SubSurfacesPoint>();
 
     const allTriangles = knots.map(k => k.surfaceTriangles).flat();
 
@@ -106,11 +136,36 @@ export function getKnotsSurfacesIntersections(knots: Knot3D[]): SubSurfacesPoint
             const triangle1 = allTriangles[i];
             const triangle2 = allTriangles[j];
             if (triangle1.knotId === triangle2.knotId) continue;
-            intersections.push(...getTrianglesIntersections(triangle1, triangle2));
+            getTrianglesIntersections(triangle1, triangle2, knots).forEach(p => intersections.add(p));
         }
     }
 
-    return intersections;
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const intersection1 of intersections) {
+            const intersectionTwin = Array.from(intersections).find(p => p.id === intersection1.surfaceIntersection?.twinPointId);
+            if (!intersectionTwin) {
+                console.warn('Could not find twin for intersection point', intersection1);
+                continue;
+            }
+            for (const otherIntersection of intersections) {
+                if (intersection1 === otherIntersection) continue;
+                if (intersectionTwin.id === otherIntersection.id) continue;
+                if (arePointsClose(intersectionTwin, otherIntersection)) {
+                    intersection1.surfaceIntersection!.twinPointId = otherIntersection.surfaceIntersection?.twinPointId;
+                    intersection1.surfaceIntersection!.twinPointKnotId = otherIntersection.surfaceIntersection?.twinPointKnotId;
+                    otherIntersection.surfaceIntersection!.twinPointId = intersection1.id;
+                    otherIntersection.surfaceIntersection!.twinPointKnotId = intersection1.surfaceIntersection?.triangle.knotId;
+                    intersections.delete(intersectionTwin);
+                    intersections.delete(otherIntersection);
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    return Array.from(intersections);
 }
 
 export function combineKnotsWithSurfaceIntersections(knots: Knot3D[]): SubSurfacesKnot[] {
@@ -119,7 +174,7 @@ export function combineKnotsWithSurfaceIntersections(knots: Knot3D[]): SubSurfac
     return knotsWithSubSurfacePoints;
 }
 
-export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): Omit<SubSurfacesKnot, 'diagramKnot'> {
+export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): SubSurface {
     const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
 
     const newKnotPoints: SubSurfacesPoint[] = [];
@@ -129,21 +184,25 @@ export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): Omit<SubSurface
         if (!currentPoint || visitedPointIds.has(currentPoint.id)) {
             return;
         }
-        newKnotPoints.push(currentPoint);
+        newKnotPoints.push({ ...currentPoint, coords: [currentPoint.coords[0] + 1, currentPoint.coords[1], currentPoint.coords[2]] as [number, number, number] });
         visitedPointIds.add(currentPoint.id);
 
-        if (currentPoint.surfaceIntersection?.twinPointKnotId && currentPoint.surfaceIntersection?.twinPointId) {
-            const twinKnot = knotsWithSubSurfacePoints.find(k => k.diagramKnot.id === currentPoint.surfaceIntersection!.twinPointKnotId)!;
-            const twinPointIndex = twinKnot.points.findIndex(p => p.id === currentPoint.surfaceIntersection!.twinPointId);
+        const twinPointId = currentPoint.surfaceIntersection?.twinPointId;
+        if (twinPointId) {
+            const twinKnot = knotsWithSubSurfacePoints.find(k => k.points.some(p => p.id === twinPointId));
+            if (!twinKnot) {
+                console.error('Could not find twin knot for point', currentPoint);
+                return;
+            }
+            const twinPointIndex = twinKnot.points.findIndex(p => p.id === twinPointId);
             if (twinPointIndex === -1) {
                 console.log('KNOT', twinKnot);
                 console.log('point', currentPoint);
             }
 
             walk(twinKnot, twinPointIndex);
-        } else {
-            walk(currentKnot, currentPointIndex + 1);
         }
+        walk(currentKnot, currentPointIndex + 1);
     }
 
     walk(knotsWithSubSurfacePoints[0], 0);
