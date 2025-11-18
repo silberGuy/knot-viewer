@@ -75,11 +75,10 @@ function get3DPoint(point: DiagramPoint, surfaceLevels: SurfaceLevel[]): Point3D
     let surfaceIndex = findPointSurfaceIndex(surfaceLevels, point);
     if (surfaceIndex === -1)
         console.warn("could not find surface for point", point);
-    // TODO: scale and center according to all points in all knots
     return {
         id: point.id,
         diagramPoint: point,
-        coords: [point.x / 100 - 2, 0.3 * surfaceIndex, point.y / 100 - 2]
+        coords: [point.x, 0.8 * surfaceIndex, point.y]
     };
 }
 
