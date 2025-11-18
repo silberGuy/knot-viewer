@@ -78,7 +78,7 @@ function get3DPoint(point: DiagramPoint, surfaceLevels: SurfaceLevel[]): Point3D
     return {
         id: point.id,
         diagramPoint: point,
-        coords: [point.x, 0.8 * surfaceIndex, point.y]
+        coords: [point.x, 6 * surfaceIndex, point.y]
     };
 }
 
