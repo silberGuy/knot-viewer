@@ -3,8 +3,8 @@
 		<!-- <Line2 :points="pointsCoords" :lineWidth="width || 4" :color="color" /> -->
 		<primitive :object="lineObject" />
 		<Sphere
-			v-for="point in pointsCoords"
-			:key="'sphere-' + point.join('_')"
+			v-for="(point, i) in pointsCoords"
+			:key="'sphere-' + point.join('_') + i"
 			:args="[0.02, 0.02, 0.02]"
 			:position="point"
 			:color="color"

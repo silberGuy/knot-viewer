@@ -15,6 +15,11 @@
 				:surfaceColor="knot.diagramKnot.knot.color"
 				:showSurfaces="controlsStore.showSurfaces"
 			/>
+			<KnotViewerKnot
+				v-if="subSurfaceLoop"
+				:knot="subSurfaceLoop"
+				:showSurfaces="false"
+			/>
 			<ViewerLine
 				v-for="linePoints in surfaceIntersectionsLines"
 				:key="linePoints.id"
@@ -50,6 +55,7 @@ import { useControlsStore } from "../data/controls";
 import { get3DKnots, getDiagram } from "../utils/diagram";
 import {
 	getKnotsSurfacesIntersections,
+	getSubSurfaceIntersectionsLoop,
 	getSurfaceIntersectionsPairs,
 } from "../utils/sub-surfaces";
 import ViewerLine from "./ViewerLine.vue";
@@ -99,10 +105,17 @@ const surfaceIntersectionsLines = computed(() => {
 	if (!controlsStore.showSurfacesIntersections) return [];
 	const points = getKnotsSurfacesIntersections(knots3D.value);
 	const pairs = getSurfaceIntersectionsPairs(points);
+	console.log(pairs);
 	return pairs.map(([p1, p2]) => ({
 		id: p1.id + "_" + p2.id,
 		points: [p1, p2],
 		color: getSurfaceIntersectionsColor(p1, p2),
 	}));
+});
+
+const subSurfaceLoop = computed(() => {
+	if (knots3D.value.length === 0) return null;
+	console.log("Computing subsurface loop");
+	return getSubSurfaceIntersectionsLoop(knots3D.value);
 });
 </script>

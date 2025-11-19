@@ -6,6 +6,19 @@ function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [n
     return v.distanceTo(new Vector3(...b.coords)) < epsilon;
 }
 
+type CompPoint = { coords: [number, number, number] };
+function isPointBetweenPoints(point: CompPoint, p1: CompPoint, p2: CompPoint, epsilon = 0.01) {
+    const vPoint = new Vector3(...point.coords);
+    const v1 = new Vector3(...p1.coords);
+    const v2 = new Vector3(...p2.coords);
+
+    const d1 = vPoint.distanceTo(v1);
+    const d2 = vPoint.distanceTo(v2);
+    const dTotal = v1.distanceTo(v2);
+
+    return Math.abs((d1 + d2) - dTotal) < epsilon;
+}
+
 function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point3D]) {
     const B = new Vector3(...triangle.points[0].coords)
     const A = new Vector3(...triangle.points[1].coords)
@@ -13,15 +26,16 @@ function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point
     const P1 = new Vector3(...line[0].coords)
     const P2 = new Vector3(...line[1].coords)
 
-    const dir = new Vector3().subVectors(P2, P1).normalize()
-    const ray = new Ray(P1, dir)
+    const lineDir = new Vector3().subVectors(P2, P1)
+    const ray = new Ray(P1, lineDir)
 
     const intersection = ray.intersectTriangle(A, B, C, false, new Vector3())
-    if (intersection) {
-        return [intersection.x, intersection.y, intersection.z];
-    }
+    if (!intersection) return null;
 
-    return null;
+    const t = intersection.clone().sub(P1).dot(lineDir) / lineDir.lengthSq()
+    if (t < 0 || t > 1) return null;
+
+    return [intersection.x, intersection.y, intersection.z];
 }
 
 function deduplicatePoints(points: SubSurfacesPoint[], epsilon = 0.01) {
@@ -61,7 +75,7 @@ function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: T
     for (const [p1, p2] of edges1) {
         const intersection = getTriangleLineIntersection(triangle2, [p1, p2]);
         if (intersection) {
-            const sortedByKnotPoints = [p1, p2].sort((a, b) => -getPointsIndexesDistanceInKnot(a, b, triangle1Knot!));
+            const sortedByKnotPoints = [p1, p2].sort((a, b) => getPointsIndexesDistanceInKnot(a, b, triangle1Knot!));
             const newPoint = {
                 id: `subsurface-inter-${p1.diagramPoint.id}-${p2.diagramPoint.id}-${triangle2.id}`,
                 surfaceIntersection: {
@@ -101,14 +115,20 @@ function getTrianglesIntersections(triangle1: Triangle3D, triangle2: Triangle3D,
 
 function injectSubSurfaceIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SubSurfacesPoint[]): SubSurfacesKnot {
     const resultPoints: SubSurfacesPoint[] = [];
+    const knotIntersections = pointsToAdd.filter(p => {
+        return p.surfaceIntersection?.triangle.knotId === knot.diagramKnot.id;
+    });
+
+    // When intersection is exactly on a knot point, it will be added twice, so we track added points
+    const addedPointIds = new Set<string>();
 
     for (let i = 0; i < knot.points.length; i++) {
         const point = knot.points[i];
-        const nextPoint = knot.points[i + 1];
+        const nextPoint = knot.points[(i + 1) % knot.points.length];
 
         resultPoints.push(point);
         // THE PROBLEM IS HERE: (
-        const intersectionsBetweenPoints = pointsToAdd.filter(p => p.surfaceIntersection?.lineP1.id === point.id)
+        const intersectionsBetweenPoints = knotIntersections.filter(p => isPointBetweenPoints(p, point, nextPoint) && !addedPointIds.has(p.id))
             //  {
             //     const linePoints = [p.surfaceIntersection?.lineP1.id, p.surfaceIntersection?.lineP2.id];
             //     return nextPoint && linePoints.includes(point.id) && linePoints.includes(nextPoint.id);
@@ -119,6 +139,7 @@ function injectSubSurfaceIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SubSur
                 return aDist - bDist;
             });
         resultPoints.push(...intersectionsBetweenPoints);
+        intersectionsBetweenPoints.forEach(p => addedPointIds.add(p.id));
     }
     return {
         ...knot,
@@ -179,16 +200,16 @@ export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): SubSurface {
 
     const newKnotPoints: SubSurfacesPoint[] = [];
     const visitedPointIds: Set<string> = new Set();
-    const walk = (currentKnot: SubSurfacesKnot, currentPointIndex: number) => {
+    const walk = (currentKnot: SubSurfacesKnot, currentPointIndex: number, justJumpedTwin = false) => {
         const currentPoint = currentKnot.points[currentPointIndex % currentKnot.points.length];
         if (!currentPoint || visitedPointIds.has(currentPoint.id)) {
             return;
         }
-        newKnotPoints.push({ ...currentPoint, coords: [currentPoint.coords[0] + 1, currentPoint.coords[1], currentPoint.coords[2]] as [number, number, number] });
+        newKnotPoints.push({ ...currentPoint, coords: [currentPoint.coords[0] + 1, currentPoint.coords[1] + 1, currentPoint.coords[2]] as [number, number, number] });
         visitedPointIds.add(currentPoint.id);
 
         const twinPointId = currentPoint.surfaceIntersection?.twinPointId;
-        if (twinPointId) {
+        if (twinPointId && !justJumpedTwin) {
             const twinKnot = knotsWithSubSurfacePoints.find(k => k.points.some(p => p.id === twinPointId));
             if (!twinKnot) {
                 console.error('Could not find twin knot for point', currentPoint);
@@ -200,9 +221,10 @@ export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): SubSurface {
                 console.log('point', currentPoint);
             }
 
-            walk(twinKnot, twinPointIndex);
+            walk(twinKnot, twinPointIndex, true);
+            return;
         }
-        walk(currentKnot, currentPointIndex + 1);
+        walk(currentKnot, (currentPointIndex + 1) % currentKnot.points.length);
     }
 
     walk(knotsWithSubSurfacePoints[0], 0);
