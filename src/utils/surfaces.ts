@@ -135,8 +135,6 @@ export function getKnotIntersectionTriangles(points: DiagramPoint[], surfaces: D
     const intersectionTriangles: DiagramTriangle[] = [];
     const getSurfaceIndex = findPointSurfaceIndex.bind(null, surfaces);
 
-    // TODO: skip intersections of different knots
-
     for (let i = 0; i < points.length - 1; i++) {
         const point = points[i];
         if (point.intersection?.isWithinKnot && !visitedIntersections.has(point.intersection.id)) {

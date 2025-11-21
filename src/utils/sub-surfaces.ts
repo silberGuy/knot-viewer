@@ -1,5 +1,7 @@
 import { Ray, Vector3 } from "three";
-import type { Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { DiagramPoint, Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import { getSurfaceLevels } from "./surfaces";
+import { getKnotTriangles } from "./diagram";
 
 function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
     const v = new Vector3(...a.coords);
@@ -229,10 +231,13 @@ export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): SubSurface {
 
     walk(knotsWithSubSurfacePoints[0], 0);
 
-    return {
+    const result: SubSurface = {
+        id: `sub-surface-${knots.map(k => k.diagramKnot.id).join('_')}`,
         points: newKnotPoints,
         surfaceTriangles: []
     };
+    result.surfaceTriangles = getSubSurfaceTriangles(result);
+    return result;
 }
 
 export function getSurfaceIntersectionsPairs(intersections: SubSurfacesPoint[]): [SubSurfacesPoint, SubSurfacesPoint][] {
@@ -251,4 +256,56 @@ export function getSurfaceIntersectionsPairs(intersections: SubSurfacesPoint[]):
         }
     }
     return pairs;
+}
+
+
+function getSubSurfaceTriangles(subSurfaceLoop: SubSurface): Triangle3D[] {
+    let pointsForSurfaces = subSurfaceLoop.points.map((p) =>
+        p.diagramPoint
+            ? ({ ...p.diagramPoint, knotId: subSurfaceLoop.id } as DiagramPoint)
+            : {
+                ...p,
+                knotId: subSurfaceLoop.id,
+                x: p.coords[0],
+                y: p.coords[2],
+            }
+    );
+    pointsForSurfaces = pointsForSurfaces.map((point) => {
+        if (
+            point.intersection &&
+            !pointsForSurfaces.some(
+                (other) => other.id === point.intersectionParallelId
+            )
+        ) {
+            const { intersection, isTop, intersectionParallelId, ...rest } = point;
+            return rest;
+        }
+        return point;
+    });
+    pointsForSurfaces = pointsForSurfaces.map((p) => {
+        if (!p.intersection) return p;
+        return {
+            ...p,
+            intersection: {
+                ...p.intersection,
+                isWithinKnot: true,
+            },
+        };
+    });
+    const surfaceLevels = getSurfaceLevels(pointsForSurfaces);
+
+    const triangles = getKnotTriangles(
+        {
+            points: pointsForSurfaces,
+            id: subSurfaceLoop.id,
+        },
+        surfaceLevels
+    );
+
+    return triangles.map((t) => ({
+        ...t,
+        points: t.points.map((p) =>
+            subSurfaceLoop.points.find((sp) => sp.id === p.id)
+        ) as [Point3D, Point3D, Point3D],
+    }));
 }

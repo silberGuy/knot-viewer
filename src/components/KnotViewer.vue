@@ -18,7 +18,8 @@
 			<KnotViewerKnot
 				v-if="subSurfaceLoop"
 				:knot="subSurfaceLoop"
-				:showSurfaces="false"
+				:showSurfaces="true"
+				surfaceColor="#ff00ff"
 			/>
 			<ViewerLine
 				v-for="linePoints in surfaceIntersectionsLines"
@@ -47,12 +48,12 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { DrawingData, SubSurfacesPoint } from "./types";
+import type { DiagramPoint, DrawingData, SubSurfacesPoint } from "./types";
 import { TresCanvas } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import { useControlsStore } from "../data/controls";
-import { get3DKnots, getDiagram } from "../utils/diagram";
+import { get3DKnots, getDiagram, getKnotTriangles } from "../utils/diagram";
 import {
 	getKnotsSurfacesIntersections,
 	getSubSurfaceIntersectionsLoop,
@@ -60,6 +61,7 @@ import {
 } from "../utils/sub-surfaces";
 import ViewerLine from "./ViewerLine.vue";
 import tinycolor from "tinycolor2";
+import { getSurfaceLevels } from "../utils/surfaces";
 
 const props = defineProps<{
 	drawingData: DrawingData;
@@ -116,6 +118,7 @@ const surfaceIntersectionsLines = computed(() => {
 const subSurfaceLoop = computed(() => {
 	if (knots3D.value.length === 0) return null;
 	console.log("Computing subsurface loop");
-	return getSubSurfaceIntersectionsLoop(knots3D.value);
+	const subSurfaceLoop = getSubSurfaceIntersectionsLoop(knots3D.value);
+	return subSurfaceLoop;
 });
 </script>
