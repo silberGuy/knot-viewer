@@ -496,6 +496,53 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@primeuix/styled@npm:^0.7.3, @primeuix/styled@npm:^0.7.4":
+  version: 0.7.4
+  resolution: "@primeuix/styled@npm:0.7.4"
+  dependencies:
+    "@primeuix/utils": "npm:^0.6.1"
+  checksum: 10c0/e1ed3e6c4a36bd5a6722b8fcd3e79d9fd60a36f174e5d822fd2fa0ecace49508c548228462ff8033961e1aa1bece6ec87c04879097c3691044314629120e968c
+  languageName: node
+  linkType: hard
+
+"@primeuix/styles@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@primeuix/styles@npm:1.2.5"
+  dependencies:
+    "@primeuix/styled": "npm:^0.7.3"
+  checksum: 10c0/49d8f5fca435e095c13bc7004187ee1d741004cf2696ed615e6a72d6732d928c55670f0f98700c3e040058746669d11abc7906f16c9b2f5631635d1260d01212
+  languageName: node
+  linkType: hard
+
+"@primeuix/utils@npm:^0.6.1":
+  version: 0.6.3
+  resolution: "@primeuix/utils@npm:0.6.3"
+  checksum: 10c0/d08638b0bea6a0124f1461c9eee54e9ad275cde5a061d85861a5b31970bc3714401dccc44abecec74ae37c971a6d795c36c3818637b54c0d7b46acb7b2c46ed9
+  languageName: node
+  linkType: hard
+
+"@primevue/core@npm:4.4.1":
+  version: 4.4.1
+  resolution: "@primevue/core@npm:4.4.1"
+  dependencies:
+    "@primeuix/styled": "npm:^0.7.4"
+    "@primeuix/utils": "npm:^0.6.1"
+  peerDependencies:
+    vue: ^3.5.0
+  checksum: 10c0/eb4252fd7dfc9428f1ced4db4e4ff404407391ea03a004dc4a9ce61418d8c0d06f13248196580ac33ed2104378d3c3590046823e42fe18271c54d2a1eb4d0fbe
+  languageName: node
+  linkType: hard
+
+"@primevue/icons@npm:4.4.1":
+  version: 4.4.1
+  resolution: "@primevue/icons@npm:4.4.1"
+  dependencies:
+    "@primeuix/utils": "npm:^0.6.1"
+    "@primevue/core": "npm:4.4.1"
+  checksum: 10c0/6a14eeb15c4ee41cec6a9874ae88c1b48dafc745cd32f6796ed8dceaf5264908fa5b8ed462b0fb2df5147e030f917ebe28e66fa9eb71d5430414014647d6b7ae
+  languageName: node
+  linkType: hard
+
 "@rolldown/pluginutils@npm:1.0.0-beta.29":
   version: 1.0.0-beta.29
   resolution: "@rolldown/pluginutils@npm:1.0.0-beta.29"
@@ -1936,6 +1983,7 @@ __metadata:
     gh-pages: "npm:^6.3.0"
     knip: "npm:^5.66.3"
     pinia: "npm:^3.0.3"
+    primevue: "npm:^4.4.1"
     three: "npm:^0.179.1"
     tinycolor2: "npm:^1.6.0"
     typescript: "npm:~5.8.3"
@@ -2408,6 +2456,19 @@ __metadata:
   version: 1.0.2
   resolution: "potpack@npm:1.0.2"
   checksum: 10c0/670c23898a4257130858b960c2e654d3327c0f6a7e7091ff5846f213e65af8f9476320b995b8ad561a47a4d1c359c7ef347de57d22e7b02597051abb52bc85c4
+  languageName: node
+  linkType: hard
+
+"primevue@npm:^4.4.1":
+  version: 4.4.1
+  resolution: "primevue@npm:4.4.1"
+  dependencies:
+    "@primeuix/styled": "npm:^0.7.4"
+    "@primeuix/styles": "npm:^1.2.5"
+    "@primeuix/utils": "npm:^0.6.1"
+    "@primevue/core": "npm:4.4.1"
+    "@primevue/icons": "npm:4.4.1"
+  checksum: 10c0/a1d5541dee8943840fa5c04bb15704726a4395a8adab9668f9ee69f0782aaab4c6bb4da0e2a3e869def2f3e43094a11f9da9f6e7b990f7ffd0fdf947bf450863
   languageName: node
   linkType: hard
 

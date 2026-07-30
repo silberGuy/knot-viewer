@@ -16,6 +16,7 @@
     "@vueuse/core": "^13.9.0",
     "clone-deep": "^4.0.1",
     "pinia": "^3.0.3",
+    "primevue": "^4.4.1",
     "three": "^0.179.1",
     "tinycolor2": "^1.6.0",
     "vue": "^3.5.18"
