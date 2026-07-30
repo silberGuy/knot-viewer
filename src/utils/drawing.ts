@@ -92,7 +92,13 @@ export function computeIntersections(knots: Knot[], interFlipIds: Set<string>) {
         for (let j = i + 1; j < lines.length; j++) {
             const linei = lines[i];
             const linej = lines[j];
-            if (isStartingPoint(linei.p1) && isClosingPoint(linej.p2)) continue;
+            if (
+                linei.knotId === linej.knotId &&
+                isStartingPoint(linei.p1) &&
+                isClosingPoint(linej.p2)
+            ) {
+                continue;
+            }
             const id = `inter-${linei.id}-${linej.id}`;
             const intersection = getIntersection(linei, linej);
             const isFlipped = interFlipIds.has(id);
