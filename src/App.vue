@@ -1,10 +1,5 @@
 <template>
 	<div class="app-layout">
-		<Topbar
-			class="topbar"
-			:drawingData="drawingData"
-			@onLoadData="onLoadData"
-		/>
 		<DrawingBoard
 			v-model:knots="drawingData.knots"
 			v-model:interFlipIds="drawingData.interFlipIds"
@@ -12,32 +7,39 @@
 		/>
 		<KnotViewer
 			:drawingData="drawingDataForViewer"
-			:key="drawingData.knots.map((knot) => knot.id).join('-')"
+			:key="`${drawingData.knots.map((knot) => knot.id).join('-')}_${
+				controlsStore.showSubSurface
+			}`"
+		/>
+		<Topbar
+			class="topbar"
+			:drawingData="drawingData"
+			@onLoadData="onLoadData"
 		/>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import cloneDeep from "clone-deep";
 import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 import Topbar from "./components/Topbar/Topbar.vue";
-import { knotsColors } from "./data/colors";
+import { useControlsStore } from "./data/controls";
+import { useDrawingStore } from "./data/drawing";
 
-const drawingData = ref<DrawingData>({
-	knots: [{ id: "1", points: [], isClosed: false, color: knotsColors[0] }],
-	interFlipIds: new Set<string>(),
-});
+const controlsStore = useControlsStore();
+const drawingStore = useDrawingStore();
+
+const drawingData = computed(() => drawingStore.getDrawingData());
 
 const drawingDataForViewer = ref<DrawingData>(
 	getCenteredData(cloneDeep(drawingData.value))
 );
 
 function onLoadData(value: DrawingData) {
-	console.log(value);
-	drawingData.value = value;
+	drawingStore.setDrawingData(value);
 	updateViewerData();
 }
 

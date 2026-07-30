@@ -26,6 +26,18 @@
 			Show Surfaces
 		</label>
 
+		<label
+			style="user-select: none"
+			v-if="drawingData && drawingData.knots.length >= 3"
+		>
+			<input
+				type="checkbox"
+				id="toggle-surfaces"
+				v-model="controlsStore.showSubSurface"
+			/>
+			Show Sub Surface
+		</label>
+
 		<label style="user-select: none">
 			<input
 				type="checkbox"
@@ -41,6 +53,7 @@
 import { computed, ref } from "vue";
 import type { DrawingData } from "../types";
 import { useControlsStore } from "../../data/controls";
+import { useDrawingStore } from "../../data/drawing";
 
 const props = defineProps<{
 	drawingData?: DrawingData;
@@ -53,6 +66,7 @@ const emit = defineEmits<{
 const fileInput = ref<HTMLInputElement | null>(null);
 
 const controlsStore = useControlsStore();
+const drawingStore = useDrawingStore();
 
 const canSave = computed(() => {
 	const points = props.drawingData?.knots.map((knot) => knot.points).flat();
@@ -62,8 +76,8 @@ const canSave = computed(() => {
 function saveToFile() {
 	if (!canSave.value) return;
 	const dataToSave = {
-		...props.drawingData,
-		interFlipIds: Array.from(props.drawingData?.interFlipIds || []),
+		...drawingStore.getDrawingData(),
+		interFlipIds: Array.from(drawingStore.interFlipIds || []),
 	};
 	const dataStr =
 		"data:text/json;charset=utf-8," +
@@ -88,6 +102,7 @@ function loadFromFile(event: Event) {
 			if (json.interFlipIds && Array.isArray(json.interFlipIds)) {
 				json.interFlipIds = new Set<string>(json.interFlipIds);
 			}
+			drawingStore.setDrawingData(json);
 			emit("onLoadData", json);
 		} catch (error) {
 			console.error("Error parsing JSON:", error);

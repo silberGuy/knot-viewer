@@ -58,6 +58,129 @@ export function getDiagram(drawingData: DrawingData): Diagram {
     }
 }
 
+function createOffsetDiagramPoint(
+    fromPoint: DiagramPoint,
+    toPoint: DiagramPoint,
+    ratio: number,
+    knotId: string,
+    baseId: string
+): DiagramPoint {
+    return {
+        id: `${baseId}-${ratio < 0.5 ? "after" : "before"}`,
+        knotId,
+        x: fromPoint.x + (toPoint.x - fromPoint.x) * ratio,
+        y: fromPoint.y + (toPoint.y - fromPoint.y) * ratio,
+        isIntersectionSep: true,
+    };
+}
+
+function getIntersectionPointForKnot(
+    knot: DiagramKnot,
+    intersectionId: string
+): DiagramPoint | undefined {
+    return knot.points.find((point) => point.intersection?.id === intersectionId);
+}
+
+export function buildSubSurfaceLoopFromDiagramKnots(
+    diagramKnots: DiagramKnot[]
+): DiagramPoint[] {
+    if (diagramKnots.length === 0) return [];
+
+    const loopPoints: DiagramPoint[] = [];
+    const processedIntersections = new Set<string>();
+    const startKnot = diagramKnots[0];
+    const startPoint = startKnot.points[0];
+    const startState = `${startKnot.id}:0`;
+
+    if (!startPoint) return [];
+
+    const addLoopPoint = (point: DiagramPoint) => {
+        if (loopPoints.some((existingPoint) => existingPoint.id === point.id)) {
+            return;
+        }
+
+        loopPoints.push({ ...point });
+    };
+
+    let currentKnot = startKnot;
+    let currentIndex = 0;
+
+    while (true) {
+        const currentPoint = currentKnot.points[currentIndex];
+        if (!currentPoint) break;
+
+        addLoopPoint(currentPoint);
+
+        const stateKey = `${currentKnot.id}:${currentIndex}`;
+        if (stateKey === startState && loopPoints.length > 1) {
+            break;
+        }
+
+        const intersection = currentPoint.intersection;
+        if (intersection && !processedIntersections.has(intersection.id)) {
+            const previousIndex =
+                (currentIndex - 1 + currentKnot.points.length) % currentKnot.points.length;
+            const previousPoint = currentKnot.points[previousIndex];
+            const nextIndex = (currentIndex + 1) % currentKnot.points.length;
+            const nextPoint = currentKnot.points[nextIndex];
+
+            if (previousPoint && nextPoint) {
+                addLoopPoint(
+                    createOffsetDiagramPoint(
+                        previousPoint,
+                        currentPoint,
+                        0.9,
+                        currentKnot.id,
+                        currentPoint.id
+                    )
+                );
+            }
+
+            const otherKnotId =
+                intersection.topLineKnotId === currentKnot.id
+                    ? intersection.bottomLineKnotId
+                    : intersection.topLineKnotId;
+            const otherKnot = diagramKnots.find((knot) => knot.id === otherKnotId);
+            const otherPointIndex = otherKnot
+                ? getIntersectionPointForKnot(otherKnot, intersection.id)?.
+                    id
+                : undefined;
+            const otherPoint = otherPointIndex
+                ? otherKnot?.points.find((point) => point.id === otherPointIndex)
+                : undefined;
+
+            if (otherKnot && otherPoint) {
+                const otherNextIndex = (otherKnot.points.indexOf(otherPoint) + 1) % otherKnot.points.length;
+                const otherNextPoint = otherKnot.points[otherNextIndex];
+
+                if (otherNextPoint) {
+                    addLoopPoint(
+                        createOffsetDiagramPoint(
+                            otherPoint,
+                            otherNextPoint,
+                            0.1,
+                            otherKnot.id,
+                            currentPoint.id
+                        )
+                    );
+                }
+
+                processedIntersections.add(intersection.id);
+                currentKnot = otherKnot;
+                currentIndex = otherNextIndex;
+                continue;
+            }
+        }
+
+        currentIndex = (currentIndex + 1) % currentKnot.points.length;
+        if (currentIndex === 0 && currentKnot.id === startKnot.id) {
+            break;
+        }
+    }
+
+    return loopPoints;
+}
+
 function minimizeSurfaceLevels(surfaceLevels: SurfaceLevel[]): SurfaceLevel[] {
     const isAllTop = (level: SurfaceLevel) => level.every(p => p.intersection && p.isTop);
     const minimizeSurfaceLevels = surfaceLevels.reduce((acc, level) => {
