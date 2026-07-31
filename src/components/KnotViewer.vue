@@ -18,7 +18,7 @@
 			<KnotViewerKnot
 				v-if="controlsStore.showSubSurface"
 				:knot="subSurfaceLoop"
-				:showSurfaces="true"
+				:showSurfaces="false"
 				surfaceColor="#ff00ff"
 			/>
 			<ViewerLine
@@ -108,7 +108,6 @@ const surfaceIntersectionsLines = computed(() => {
 	if (!controlsStore.showSurfacesIntersections) return [];
 	const points = getKnotsSurfacesIntersections(knots3D.value);
 	const pairs = getSurfaceIntersectionsPairs(points);
-	console.log(pairs);
 	return pairs.map(([p1, p2]) => ({
 		id: p1.id + "_" + p2.id,
 		points: [p1, p2],
@@ -117,6 +116,8 @@ const surfaceIntersectionsLines = computed(() => {
 });
 
 const subSurfaceLoop = computed(() => {
-	return getSubSurfaceIntersectionsLoop(knots3D.value);
+	const loop = getSubSurfaceIntersectionsLoop(knots3D.value);
+	console.log(loop);
+	return loop;
 });
 </script>

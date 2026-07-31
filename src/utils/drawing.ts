@@ -14,8 +14,26 @@ function isClosingPoint(point: Point) {
     return point.id.endsWith(CLOSING_POINT_ID);
 }
 
+function getPointBetween(pointA: Coords2D, pointB: Coords2D, ratio: number): Coords2D {
+    return {
+        x: pointA.x + (pointB.x - pointA.x) * ratio,
+        y: pointA.y + (pointB.y - pointA.y) * ratio,
+    };
+}
+
 function getLineId(prefix: string, p1: Point, p2: Point): string {
     return [prefix, p1.id, p2.id].join("-");
+}
+
+function getInsertionIndexForLine(knot: Knot, line: Line): number | null {
+    const pointIndex = knot.points.findIndex((point) => point.id === line.p1.id);
+    if (pointIndex !== -1) return pointIndex;
+
+    if (knot.isClosed && line.p2.id === `${knot.id}-${CLOSING_POINT_ID}`) {
+        return knot.points.length - 1;
+    }
+
+    return null;
 }
 
 export function getKnotLines(knot: Knot): Line[] {
@@ -141,45 +159,57 @@ export function combineKnotPointsWithIntersections(knot: Knot, intersections: In
     );
     let resultPoints: DiagramPoint[] = [];
 
-    const pointsToAdd = knotIntersections.map(inter => {
+    const pointsToAdd = knotIntersections.flatMap((inter) => {
         const topId = `${inter.id}-top`;
         const bottomId = inter.id;
+        const thisIntersectionPoints: { insertionIndex: number; points: DiagramPoint[] }[] = [];
 
-        const thisIntersectionPoints: { lineStartId: string; points: DiagramPoint[] }[] = [];
         if (inter.topLineKnotId === knotId) {
             const line = inter.topLine;
-            thisIntersectionPoints.push({
-                lineStartId: line.p1.id,
-                points: [
-                    { id: `pre-${topId}`, x: (inter.point.x + line.p1.x) / 2, y: (inter.point.y + line.p1.y) / 2, isIntersectionSep: true, knotId },
+            const insertionIndex = getInsertionIndexForLine(knot, line);
+
+            if (insertionIndex !== null) {
+                const points = [
+                    { id: `pre-${topId}`, ...getPointBetween(inter.point, line.p1, 1 / 3), isIntersectionSep: true, knotId },
                     { ...inter.point, id: topId, intersectionParallelId: bottomId, intersection: inter, isTop: true, knotId },
-                    { id: `post-${topId}`, x: (inter.point.x + line.p2.x) / 2, y: (inter.point.y + line.p2.y) / 2, isIntersectionSep: true, knotId },
-                ]
-            })
+                    { id: `post-${topId}`, ...getPointBetween(inter.point, line.p2, 1 / 3), isIntersectionSep: true, knotId },
+                ];
+                thisIntersectionPoints.push({ insertionIndex, points });
+            }
         }
+
         if (inter.bottomLineKnotId === knotId) {
             const line = inter.bottomLine;
-            thisIntersectionPoints.push({
-                lineStartId: line.p1.id,
-                points: [
-                    { id: `pre-${bottomId}`, x: (inter.point.x + line.p1.x) / 2, y: (inter.point.y + line.p1.y) / 2, isIntersectionSep: true, knotId },
-                    { ...inter.point, id: bottomId, intersectionParallelId: topId, intersection: inter, isTop: false, knotId },
-                    { id: `post-${bottomId}`, x: (inter.point.x + line.p2.x) / 2, y: (inter.point.y + line.p2.y) / 2, isIntersectionSep: true, knotId },
-                ]
-            })
+            const insertionIndex = getInsertionIndexForLine(knot, line);
+
+            if (insertionIndex !== null) {
+                thisIntersectionPoints.push({
+                    insertionIndex,
+                    points: [
+                        { id: `pre-${bottomId}`, ...getPointBetween(inter.point, line.p1, 1 / 3), isIntersectionSep: true, knotId },
+                        { ...inter.point, id: bottomId, intersectionParallelId: topId, intersection: inter, isTop: false, knotId },
+                        { id: `post-${bottomId}`, ...getPointBetween(inter.point, line.p2, 1 / 3), isIntersectionSep: true, knotId },
+                    ]
+                });
+            }
         }
+
         return thisIntersectionPoints;
-    }).flat();
+    });
 
     for (let i = 0; i < knot.points.length; i++) {
         const point = knot.points[i];
         resultPoints.push(point);
 
-        const pointsAfterPoint = pointsToAdd.filter(({ lineStartId }) => lineStartId === point.id).map(({ points }) => points).flat().sort((a, b) => {
-            const aDist = Math.hypot(a.x - point.x, a.y - point.y);
-            const bDist = Math.hypot(b.x - point.x, b.y - point.y);
-            return aDist - bDist;
-        });
+        const pointsAfterPoint = pointsToAdd
+            .filter(({ insertionIndex }) => insertionIndex === i)
+            .map(({ points }) => points)
+            .flat()
+            .sort((a, b) => {
+                const aDist = Math.hypot(a.x - point.x, a.y - point.y);
+                const bDist = Math.hypot(b.x - point.x, b.y - point.y);
+                return aDist - bDist;
+            });
         resultPoints.push(...pointsAfterPoint);
     }
 

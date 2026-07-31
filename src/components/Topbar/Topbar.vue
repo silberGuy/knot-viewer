@@ -29,6 +29,15 @@
 		<label style="user-select: none">
 			<input
 				type="checkbox"
+				id="toggle-sub-surface"
+				v-model="controlsStore.showSubSurface"
+			/>
+			Show Sub-Surfaces
+		</label>
+
+		<label style="user-select: none">
+			<input
+				type="checkbox"
 				id="toggle-surfaces"
 				v-model="controlsStore.showSurfacesIntersections"
 			/>

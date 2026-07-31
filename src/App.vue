@@ -32,7 +32,7 @@ const drawingData = ref<DrawingData>({
 });
 
 const drawingDataForViewer = ref<DrawingData>(
-	getCenteredData(cloneDeep(drawingData.value))
+	getCenteredData(cloneDeep(drawingData.value)),
 );
 
 function onLoadData(value: DrawingData) {
