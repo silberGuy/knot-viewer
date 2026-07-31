@@ -16,7 +16,7 @@
 				:showSurfaces="controlsStore.showSurfaces"
 			/>
 			<KnotViewerKnot
-				v-if="controlsStore.showSubSurface"
+				v-if="controlsStore.isSubSurfaceActive"
 				:knot="subSurfaceLoop"
 				:showSurfaces="false"
 				surfaceColor="#ff00ff"
@@ -115,9 +115,5 @@ const surfaceIntersectionsLines = computed(() => {
 	}));
 });
 
-const subSurfaceLoop = computed(() => {
-	const loop = getSubSurfaceIntersectionsLoop(knots3D.value);
-	console.log(loop);
-	return loop;
-});
+const subSurfaceLoop = computed(() => getSubSurfaceIntersectionsLoop(knots3D.value));
 </script>

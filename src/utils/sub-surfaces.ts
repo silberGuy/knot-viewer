@@ -198,6 +198,10 @@ export function combineKnotsWithSurfaceIntersections(knots: Knot3D[]): SubSurfac
 }
 
 export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): SubSurface {
+    if (knots.length === 0) {
+        return { id: 'sub-surface-empty', points: [], surfaceTriangles: [] };
+    }
+
     const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
 
     const newKnotPoints: SubSurfacesPoint[] = [];

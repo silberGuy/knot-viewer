@@ -8,20 +8,20 @@
 		<div class="board-pane">
 			<div class="board-tabs">
 				<button
-					:class="{ active: activeTab === 'drawing' }"
-					@click="activeTab = 'drawing'"
+					:class="{ active: controlsStore.activeTab === 'drawing' }"
+					@click="controlsStore.activeTab = 'drawing'"
 				>
 					Drawing
 				</button>
 				<button
-					:class="{ active: activeTab === 'subsurface' }"
-					@click="activeTab = 'subsurface'"
+					:class="{ active: controlsStore.activeTab === 'subsurface' }"
+					@click="controlsStore.activeTab = 'subsurface'"
 				>
 					Subsurface
 				</button>
 			</div>
 			<DrawingBoard
-				v-if="activeTab === 'drawing'"
+				v-if="controlsStore.activeTab === 'drawing'"
 				v-model:knots="drawingData.knots"
 				v-model:interFlipIds="drawingData.interFlipIds"
 				@rerender="updateViewerData"
@@ -48,8 +48,9 @@ import SubsurfaceBoard from "./components/SubsurfaceBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 import Topbar from "./components/Topbar/Topbar.vue";
 import { knotsColors } from "./data/colors";
+import { useControlsStore } from "./data/controls";
 
-const activeTab = ref<"drawing" | "subsurface">("drawing");
+const controlsStore = useControlsStore();
 
 const drawingData = ref<DrawingData>({
 	knots: [{ id: "1", points: [], isClosed: false, color: knotsColors[0] }],

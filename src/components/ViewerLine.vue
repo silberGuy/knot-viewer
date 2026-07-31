@@ -15,7 +15,7 @@
 <script setup lang="ts">
 import { Sphere } from "@tresjs/cientos";
 import type { Point3D, SubSurfacesPoint } from "./types";
-import { computed } from "vue";
+import { computed, onBeforeUnmount, watch } from "vue";
 import * as THREE from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
@@ -49,4 +49,17 @@ const lineObject = computed(() => {
 	line.renderOrder = 10;
 	return line;
 });
+
+// `<primitive>` only adds the current lineObject to the scene; it doesn't
+// reliably detach the previous one when this recomputes or when this
+// component unmounts, so the old Line2 is cleaned up explicitly here.
+function disposeLine(line: Line2 | undefined) {
+	if (!line) return;
+	line.removeFromParent();
+	line.geometry.dispose();
+	line.material.dispose();
+}
+
+watch(lineObject, (_current, previous) => disposeLine(previous));
+onBeforeUnmount(() => disposeLine(lineObject.value));
 </script>
