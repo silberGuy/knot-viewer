@@ -2,12 +2,12 @@
 	<div class="knot-viewer">
 		<TresCanvas>
 			<TresPerspectiveCamera
-				:position="[80, 80, 160]"
+				:position="cameraPosition"
 				:fov="50"
 				:near="0.1"
 				:far="1000"
 			/>
-			<OrbitControls />
+			<OrbitControls :target="orbitTarget" />
 			<KnotViewerKnot
 				v-for="knot in knots3D"
 				:knot="knot"
@@ -30,16 +30,17 @@
 				noDepthTest
 			/>
 			<Grid
+				:position="[orbitTarget[0], -8, orbitTarget[2]]"
 				:args="[10.5, 10.5]"
-				cell-color="#82dbc5"
-				:cell-size="8"
-				:cell-thickness="1"
+				cell-color="#fbb03b"
+				:cell-size="32"
+				:cell-thickness="0.9"
 				section-color="#fbb03b"
 				:section-size="8"
-				:section-thickness="1.3"
+				:section-thickness="0.7"
 				:infinite-grid="true"
 				:fade-from="0"
-				:fade-distance="150"
+				:fade-distance="5000"
 				:fade-strength="1"
 			/>
 		</TresCanvas>
@@ -72,6 +73,27 @@ const controlsStore = useControlsStore();
 
 const diagram = computed(() => getDiagram(props.drawingData));
 const knots3D = computed(() => get3DKnots(diagram.value));
+
+// Purely cosmetic default framing - the knot's actual geometry (knots3D,
+// subSurfaceLoop) is always computed from raw, uncentered drawingData, so
+// it stays identical to what SubsurfaceBoard computes for the same
+// drawing; this never touches that. Knot points are drawn in the Drawing
+// board's raw SVG pixel coordinates (no viewBox), so "centered" here means
+// facing where that board's own center would fall, not the 3D origin -
+// approximated once from the board pane's layout share (see App.vue's
+// `.board-pane` grid column/row) rather than measured live or recomputed
+// as the drawing changes.
+const orbitTarget: [number, number, number] = [
+	(window.innerWidth * 0.47) / 2,
+	0,
+	(window.innerHeight - 60) / 2,
+];
+const cameraDistanceScale = 2;
+const cameraPosition: [number, number, number] = [
+	orbitTarget[0] + 80 * cameraDistanceScale,
+	80 * cameraDistanceScale,
+	orbitTarget[2] + 160 * cameraDistanceScale,
+];
 
 function getKnotColor(knotId: string) {
 	return (
@@ -115,5 +137,7 @@ const surfaceIntersectionsLines = computed(() => {
 	}));
 });
 
-const subSurfaceLoop = computed(() => getSubSurfaceIntersectionsLoop(knots3D.value));
+const subSurfaceLoop = computed(() =>
+	getSubSurfaceIntersectionsLoop(knots3D.value),
+);
 </script>

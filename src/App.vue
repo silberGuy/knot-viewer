@@ -28,8 +28,8 @@
 			/>
 			<SubsurfaceBoard
 				v-else
-				:knots="drawingData.knots"
-				:interFlipIds="drawingData.interFlipIds"
+				:knots="drawingDataForViewer.knots"
+				:interFlipIds="drawingDataForViewer.interFlipIds"
 			/>
 		</div>
 		<KnotViewer
@@ -57,9 +57,7 @@ const drawingData = ref<DrawingData>({
 	interFlipIds: new Set<string>(),
 });
 
-const drawingDataForViewer = ref<DrawingData>(
-	getCenteredData(cloneDeep(drawingData.value)),
-);
+const drawingDataForViewer = ref<DrawingData>(cloneDeep(drawingData.value));
 
 function onLoadData(value: DrawingData) {
 	console.log(value);
@@ -68,28 +66,7 @@ function onLoadData(value: DrawingData) {
 }
 
 function updateViewerData() {
-	drawingDataForViewer.value = getCenteredData(cloneDeep(drawingData.value));
-}
-
-function getCenteredData(data: DrawingData): DrawingData {
-	const allPoints = data.knots.flatMap((knot) => knot.points);
-	if (allPoints.length === 0) return data;
-	const minX = Math.min(...allPoints.map((pt) => pt.x));
-	const minY = Math.min(...allPoints.map((pt) => pt.y));
-	const maxX = Math.max(...allPoints.map((pt) => pt.x));
-	const maxY = Math.max(...allPoints.map((pt) => pt.y));
-	const offsetX = minX + (maxX - minX) / 2;
-	const offsetY = minY + (maxY - minY) / 2;
-
-	const knots = data.knots.map((knot) => {
-		const points = knot.points.map((pt) => ({
-			...pt,
-			x: (pt.x - offsetX) / 2,
-			y: (pt.y - offsetY) / 2,
-		}));
-		return { ...knot, points };
-	});
-	return { ...data, knots };
+	drawingDataForViewer.value = cloneDeep(drawingData.value);
 }
 </script>
 
