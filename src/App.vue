@@ -5,11 +5,33 @@
 			:drawingData="drawingData"
 			@onLoadData="onLoadData"
 		/>
-		<DrawingBoard
-			v-model:knots="drawingData.knots"
-			v-model:interFlipIds="drawingData.interFlipIds"
-			@rerender="updateViewerData"
-		/>
+		<div class="board-pane">
+			<div class="board-tabs">
+				<button
+					:class="{ active: activeTab === 'drawing' }"
+					@click="activeTab = 'drawing'"
+				>
+					Drawing
+				</button>
+				<button
+					:class="{ active: activeTab === 'subsurface' }"
+					@click="activeTab = 'subsurface'"
+				>
+					Subsurface
+				</button>
+			</div>
+			<DrawingBoard
+				v-if="activeTab === 'drawing'"
+				v-model:knots="drawingData.knots"
+				v-model:interFlipIds="drawingData.interFlipIds"
+				@rerender="updateViewerData"
+			/>
+			<SubsurfaceBoard
+				v-else
+				:knots="drawingData.knots"
+				:interFlipIds="drawingData.interFlipIds"
+			/>
+		</div>
 		<KnotViewer
 			:drawingData="drawingDataForViewer"
 			:key="drawingData.knots.map((knot) => knot.id).join('-')"
@@ -22,9 +44,12 @@ import { ref } from "vue";
 import cloneDeep from "clone-deep";
 import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
+import SubsurfaceBoard from "./components/SubsurfaceBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 import Topbar from "./components/Topbar/Topbar.vue";
 import { knotsColors } from "./data/colors";
+
+const activeTab = ref<"drawing" | "subsurface">("drawing");
 
 const drawingData = ref<DrawingData>({
 	knots: [{ id: "1", points: [], isClosed: false, color: knotsColors[0] }],
@@ -82,5 +107,37 @@ function getCenteredData(data: DrawingData): DrawingData {
 
 .topbar {
 	grid-area: top;
+}
+
+.board-pane {
+	grid-area: drawing;
+	position: relative;
+	min-height: 0;
+}
+
+.board-tabs {
+	position: absolute;
+	top: 0.75em;
+	left: 1em;
+	z-index: 1;
+	display: flex;
+	gap: 0.25em;
+	padding: 0.25em;
+	background: lightblue;
+	border-radius: 8px;
+}
+
+.board-tabs button {
+	padding: 0.4em 1em;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	border-radius: 6px;
+	font-weight: bold;
+	color: #333;
+}
+
+.board-tabs button.active {
+	background: #fff;
 }
 </style>
