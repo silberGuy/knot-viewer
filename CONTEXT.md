@@ -33,9 +33,14 @@ board is showing and what it's for*)
 The graph-walk that produces a `SubSurface` (see [AGENTS.md](./AGENTS.md)) — starting at a
 point and, at each **crossing point**, resolving that crossing's **crossing walk direction** to
 decide whether to continue straight or jump to the crossing's twin point. Because the resulting
-loop is closed, the walk's own starting point is never user-facing or meaningful on its own —
-internally, any crossing point can seed it (picked deterministically), since every crossing
-point already resolves to a direction one way or another.
+loop is closed, the walk's own starting point isn't meaningful on its own by default — any
+crossing point can seed it (picked deterministically), since every crossing point already
+resolves to a direction one way or another. The user can override this by clicking any of a
+knot's own points on the **Subsurface board** (heading forward from there, per **Going forward
+on a knot**) — since the walk is a deterministic graph-walk, this matters most when a drawing's
+crossings resolve into more than one disjoint loop, letting the user reach one the default
+anchor wouldn't otherwise show. Resets to the default anchor each time the Subsurface tab is
+activated, same as **crossing walk direction** overrides.
 
 **Going forward on a knot**:
 Stepping from one point to the next in a knot's own points array, wrapping at the end for a
@@ -53,18 +58,20 @@ choice where the crossing sits at a real 2D intersection) — unlike the walk's 
 role never changes depending on which side the walk happens to arrive from. A direction names
 which role's knot the walk should continue on: stay if it's already there, or cross to the other
 point if it isn't, then forward or backward from there — four possible directions, of which three
-are ever offered at once, since the fourth would exactly retrace the crossing's own **arrival
-direction**. Shown as a clickable arrow on the **Subsurface board**, next to each crossing point
-that's part of the currently displayed loop *and* sits at a real 2D intersection between the two
-knots involved — a knot's surface also grows small bridging triangles around every 2D intersection
-to cover the height change between over/under levels, and one of those triangles' own far edges
-can independently produce a second, nearby crossing point that isn't at the 2D intersection at
-all; that one is still walked (using its default direction) but never gets its own arrow. Clicking
-an arrow cycles to the next of the three alternatives. Every crossing point has a crossing walk
-direction at all times, defaulting to "cross to the upper knot, then forward" until the user
-overrides it by clicking. All crossing walk directions reset to their defaults each time the
-Subsurface tab is activated, since the knots — and therefore the crossings — can't change while
-that tab is showing.
+are ever offered at once when the crossing has an **arrival direction** to retrace, since the
+fourth would exactly retrace it. Shown as a clickable arrow on the **Subsurface board**, next to
+every crossing point that sits at a real 2D intersection between the two knots involved — not
+only ones the currently displayed loop happens to pass through; a crossing outside the current
+loop has no arrival to retrace, so its arrow offers all four directions and is drawn grey to mark
+it as outside the loop, rather than the usual color. (A knot's surface also grows small bridging
+triangles around every 2D intersection to cover the height change between over/under levels, and
+one of those triangles' own far edges can independently produce a second, nearby crossing point
+that isn't at the 2D intersection at all; that one is still walked (using its default direction)
+but never gets its own arrow.) Clicking an arrow cycles to the next alternative. Every crossing
+point has a crossing walk direction at all times, defaulting to "cross to the upper knot, then
+forward" until the user overrides it by clicking. All crossing walk directions reset to their
+defaults each time the Subsurface tab is activated, since the knots — and therefore the
+crossings — can't change while that tab is showing.
 
 **Arrival direction**:
 The role and forward/backward step describing which line the **Subsurface walk** was actually
@@ -73,7 +80,8 @@ travelling along, and which way, in the step immediately before it reached a giv
 names where the walk goes *next*, and can name either knot regardless of which one the walk
 actually arrived on). Same shape as a crossing walk direction, but a different value in general —
 used only to identify the one of the crossing's four possible crossing walk directions that would
-exactly retrace the arrival, so the arrow never offers it.
+exactly retrace the arrival, so the arrow never offers it. Doesn't exist for a crossing the
+current loop never reaches — there's nothing to have arrived from, so nothing is excluded.
 
 **Subsurface loop**:
 The `SubSurface` a subsurface walk produces — an ordered sequence of points that alternates

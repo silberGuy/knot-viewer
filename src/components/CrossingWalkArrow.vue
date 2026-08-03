@@ -1,6 +1,7 @@
 <template>
 	<g
 		class="crossing-walk-arrow"
+		:class="{ 'crossing-walk-arrow--off-loop': !isInLoop }"
 		:transform="`translate(${arrow.position.x}, ${arrow.position.y}) rotate(${angle})`"
 		@click.stop="selectNext"
 	>
@@ -38,15 +39,25 @@ const emit = defineEmits<{
 	(event: "select", direction: CrossingWalkDirection): void;
 }>();
 
+// Not every crossing's point is part of the currently walked loop (see getCrossingWalkArrows)
+// - there's no arrival to speak of for one the walk never reaches, so no direction is
+// excluded for it either (see excludedDirection below), and CrossingWalkArrow renders it
+// grey rather than the usual color.
+const arrivalIndex = computed(() =>
+	props.walkPoints.findIndex((p) => getCrossingId(p) === props.arrow.crossingId),
+);
+
+const isInLoop = computed(() => arrivalIndex.value !== -1);
+
 // The direction (role + step) the walk was actually moving in right before it reached this
 // crossing - see "Arrival direction" in CONTEXT.md. Found by comparing the walked loop's
 // previous point against this crossing's own knot's forward/backward neighbor (see "Going
 // forward on a knot"), not by currentDirection - the walk can arrive from either side
 // regardless of which knot it resolves to continue on.
-const arrivalDirection = computed<CrossingWalkDirection>(() => {
-	const index = props.walkPoints.findIndex(
-		(p) => getCrossingId(p) === props.arrow.crossingId,
-	);
+const arrivalDirection = computed<CrossingWalkDirection | undefined>(() => {
+	const index = arrivalIndex.value;
+	if (index === -1) return undefined;
+
 	const point = props.walkPoints[index];
 	const previousPoint =
 		props.walkPoints[
@@ -66,8 +77,10 @@ const arrivalDirection = computed<CrossingWalkDirection>(() => {
 });
 
 // Excluded so the arrow never offers a choice that would just retrace straight back the way
-// the walk came in.
-const excludedDirection = computed<CrossingWalkDirection>(() => {
+// the walk came in - undefined (nothing excluded) for a crossing outside the current loop,
+// since there's no arrival to retrace.
+const excludedDirection = computed<CrossingWalkDirection | undefined>(() => {
+	if (!arrivalDirection.value) return undefined;
 	const role = directionToRole(arrivalDirection.value);
 	const step = directionToStep(arrivalDirection.value);
 	return directionFromRoleAndStep(role, step === 1 ? -1 : 1);
@@ -115,5 +128,14 @@ function selectNext() {
 
 .crossing-walk-arrow:hover .crossing-walk-arrow-head {
 	fill: #ffcc55;
+}
+
+.crossing-walk-arrow--off-loop .crossing-walk-arrow-head {
+	fill: #aaaaaa;
+	stroke: #666666;
+}
+
+.crossing-walk-arrow--off-loop:hover .crossing-walk-arrow-head {
+	fill: #cccccc;
 }
 </style>

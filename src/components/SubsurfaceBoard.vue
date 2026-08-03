@@ -10,14 +10,6 @@
 				:x2="segment.to.x"
 				:y2="segment.to.y"
 			/>
-			<line
-				:key="loopSegments[0].id + '11'"
-				class="subsurface-loop-line1"
-				:x1="loopSegments[0].from.x"
-				:y1="loopSegments[0].from.y"
-				:x2="loopSegments[0].to.x"
-				:y2="loopSegments[0].to.y"
-			/>
 			<KnotShape
 				v-for="knot in knots"
 				:key="knot.id"
@@ -25,7 +17,18 @@
 				:points="knot.points"
 				:isClosed="knot.isClosed"
 				:color="knot.color"
-			/>
+			>
+				<template #point="{ point }">
+					<circle
+						class="normal-point"
+						:cx="point.x"
+						:cy="point.y"
+						r="6"
+						:fill="knot.color || 'black'"
+						@click.stop="subsurfaceWalkStore.setStartPoint(point.id)"
+					/>
+				</template>
+			</KnotShape>
 			<KnotIntersections
 				:knots="knots"
 				:interFlipIds="interFlipIds"
@@ -37,7 +40,17 @@
 				:arrow="arrow"
 				:walk-points="subSurfaceLoop.points"
 				:knots="knotsWithSubSurfacePoints"
-				@select="(direction) => subsurfaceWalkStore.setDirection(arrow.crossingId, direction)"
+				@select="
+					(direction) =>
+						subsurfaceWalkStore.setDirection(arrow.crossingId, direction)
+				"
+			/>
+			<circle
+				v-if="projectedLoopPoints.length > 0"
+				class="subsurface-loop-start-marker"
+				:cx="projectedLoopPoints[0].x"
+				:cy="projectedLoopPoints[0].y"
+				r="10"
 			/>
 		</svg>
 	</div>
@@ -88,6 +101,7 @@ const subSurfaceLoop = computed(() =>
 	getSubSurfaceIntersectionsLoop(
 		knots3D.value,
 		subsurfaceWalkStore.crossingWalkDirections,
+		subsurfaceWalkStore.selectedStartPointId,
 	),
 );
 
@@ -134,15 +148,15 @@ const loopSegments = computed<LoopSegment[]>(() => {
 	return segments;
 });
 
-// One arrow per crossing point that's part of the currently displayed loop -
-// never two, even though a crossing is really a pair of points (the point
-// and its twin on the other knot's surface): they're positioned at the same
-// real 2D intersection either way (see getCrossingWalkArrows). Rendering and
-// direction-cycling live in CrossingWalkArrow.vue; this board just owns
-// where the resulting override is stored.
+// One arrow per real-intersection crossing across every knot - not just ones the currently
+// displayed loop passes through (see getCrossingWalkArrows) - never two per crossing, even
+// though a crossing is really a pair of points (the point and its twin on the other knot's
+// surface): they're positioned at the same real 2D intersection either way. Rendering,
+// off-loop styling, and direction-cycling live in CrossingWalkArrow.vue; this board just
+// owns where the resulting override is stored.
 const crossingWalkArrows = computed(() =>
 	getCrossingWalkArrows(
-		subSurfaceLoop.value,
+		knotsWithSubSurfacePoints.value,
 		subsurfaceWalkStore.crossingWalkDirections,
 	),
 );
@@ -167,8 +181,14 @@ svg {
 	stroke-width: 8;
 }
 
-.subsurface-loop-line1 {
-	stroke: #480d48cc;
-	stroke-width: 12;
+.normal-point {
+	cursor: pointer;
+}
+
+.subsurface-loop-start-marker {
+	fill: none;
+	stroke: #00aaff;
+	stroke-width: 3;
+	pointer-events: none;
 }
 </style>

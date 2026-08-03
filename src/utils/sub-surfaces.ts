@@ -322,15 +322,25 @@ function runWalk(
     return points;
 }
 
-// Starting point is never user-facing (a closed loop has no beginning), so any crossing
-// works as an anchor - the lowest crossing id, for a stable result. Starts on whichever of
-// the anchor's two points (see getCrossingRole) its own resolved direction targets - a
-// fixed choice, not "whichever knot happens to be found first" (see ADR 0003). Falls back
-// to a fixed first point when there are no crossings to anchor on.
+// Starting point is never user-facing (a closed loop has no beginning) *unless* the user
+// explicitly picked one by clicking a point on the Subsurface board (selectedStartPointId,
+// found forward from - see "Going forward on a knot"). Absent that, any crossing works as an
+// anchor - the lowest crossing id, for a stable result. Starts on whichever of the anchor's
+// two points (see getCrossingRole) its own resolved direction targets - a fixed choice, not
+// "whichever knot happens to be found first" (see ADR 0003). Falls back to a fixed first
+// point when there are no crossings to anchor on either.
 function getWalkStart(
     knotsWithSubSurfacePoints: SubSurfacesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
+    selectedStartPointId?: string,
 ): WalkState {
+    if (selectedStartPointId) {
+        for (const knot of knotsWithSubSurfacePoints) {
+            const pointIndex = knot.points.findIndex(p => p.id === selectedStartPointId);
+            if (pointIndex !== -1) return { knot, pointIndex, step: 1, justArrivedViaJump: false };
+        }
+    }
+
     const crossingIds = new Set<string>();
     for (const knot of knotsWithSubSurfacePoints) {
         for (const point of knot.points) {
@@ -357,13 +367,17 @@ function getWalkStart(
     return { knot: knotsWithSubSurfacePoints[0], pointIndex: 0, step: 1, justArrivedViaJump: false };
 }
 
-export function getSubSurfaceIntersectionsLoop(knots: Knot3D[], crossingWalkDirections: CrossingWalkDirections = new Map()): SubSurface {
+export function getSubSurfaceIntersectionsLoop(
+    knots: Knot3D[],
+    crossingWalkDirections: CrossingWalkDirections = new Map(),
+    selectedStartPointId?: string,
+): SubSurface {
     if (knots.length === 0) {
         return { id: 'sub-surface-empty', points: [], surfaceTriangles: [] };
     }
 
     const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
-    const start = getWalkStart(knotsWithSubSurfacePoints, crossingWalkDirections);
+    const start = getWalkStart(knotsWithSubSurfacePoints, crossingWalkDirections, selectedStartPointId);
     const walkedPoints = runWalk(start, knotsWithSubSurfacePoints, crossingWalkDirections);
 
     const result: SubSurface = {
@@ -432,39 +446,43 @@ export function getCrossingRole(point: SubSurfacesPoint): "lower" | "upper" | un
     return point.id < twinPointId ? "lower" : "upper";
 }
 
-// One arrow per crossing in the loop that sits at a real 2D intersection, positioned at that
-// intersection's own point (fixed, unlike either of the crossing's two SubSurfacesPoints), and
-// carrying that intersection's own topLine/bottomLine geometry - CrossingWalkArrow.vue derives
-// the arrival direction (see CONTEXT.md), which options to exclude, and the facing angle from
-// these directly. Crossings not at a real intersection still resolve (via their default) but
-// get no arrow.
+// One arrow per crossing across every knot that sits at a real 2D intersection - not just
+// ones the currently displayed loop happens to pass through (CrossingWalkArrow.vue tells the
+// two apart via its own walkPoints lookup, and styles off-loop ones differently) - positioned
+// at that intersection's own point (fixed, unlike either of the crossing's two
+// SubSurfacesPoints), and carrying that intersection's own topLine/bottomLine geometry -
+// CrossingWalkArrow.vue derives the arrival direction (see CONTEXT.md), which options to
+// exclude, and the facing angle from these directly. Crossings not at a real intersection
+// still resolve (via their default) but get no arrow.
 export function getCrossingWalkArrows(
-    loop: SubSurface,
+    knotsWithSubSurfacePoints: SubSurfacesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
 ): CrossingWalkArrow[] {
     const arrows: CrossingWalkArrow[] = [];
     const seenCrossingIds = new Set<string>();
 
-    for (const point of loop.points) {
-        const crossingId = getCrossingId(point);
-        if (!crossingId || seenCrossingIds.has(crossingId)) continue;
-        seenCrossingIds.add(crossingId);
-        const realIntersection = point.surfaceIntersection && findRealIntersection(point.surfaceIntersection);
-        if (!realIntersection) continue;
+    for (const knot of knotsWithSubSurfacePoints) {
+        for (const point of knot.points) {
+            const crossingId = getCrossingId(point);
+            if (!crossingId || seenCrossingIds.has(crossingId)) continue;
+            seenCrossingIds.add(crossingId);
+            const realIntersection = point.surfaceIntersection && findRealIntersection(point.surfaceIntersection);
+            if (!realIntersection) continue;
 
-        arrows.push({
-            crossingId,
-            position: { x: realIntersection.point.x, y: realIntersection.point.y },
-            currentDirection: crossingWalkDirections.get(crossingId) ?? DEFAULT_CROSSING_WALK_DIRECTION,
-            topLine: {
-                p1: { x: realIntersection.topLine.p1.x, y: realIntersection.topLine.p1.y },
-                p2: { x: realIntersection.topLine.p2.x, y: realIntersection.topLine.p2.y },
-            },
-            bottomLine: {
-                p1: { x: realIntersection.bottomLine.p1.x, y: realIntersection.bottomLine.p1.y },
-                p2: { x: realIntersection.bottomLine.p2.x, y: realIntersection.bottomLine.p2.y },
-            },
-        });
+            arrows.push({
+                crossingId,
+                position: { x: realIntersection.point.x, y: realIntersection.point.y },
+                currentDirection: crossingWalkDirections.get(crossingId) ?? DEFAULT_CROSSING_WALK_DIRECTION,
+                topLine: {
+                    p1: { x: realIntersection.topLine.p1.x, y: realIntersection.topLine.p1.y },
+                    p2: { x: realIntersection.topLine.p2.x, y: realIntersection.topLine.p2.y },
+                },
+                bottomLine: {
+                    p1: { x: realIntersection.bottomLine.p1.x, y: realIntersection.bottomLine.p1.y },
+                    p2: { x: realIntersection.bottomLine.p2.x, y: realIntersection.bottomLine.p2.y },
+                },
+            });
+        }
     }
 
     return arrows;
