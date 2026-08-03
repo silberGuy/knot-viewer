@@ -1,5 +1,6 @@
 <template>
 	<div class="knot-viewer">
+		<ViewerControls />
 		<TresCanvas>
 			<TresPerspectiveCamera
 				:position="cameraPosition"
@@ -53,6 +54,7 @@ import type { DrawingData, SubSurfacesPoint } from "./types";
 import { TresCanvas, extend } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
+import ViewerControls from "./ViewerControls.vue";
 import { useControlsStore } from "../data/controls";
 import { useSubsurfaceWalkStore } from "../data/subsurface-walk";
 import { get3DKnots, getDiagram } from "../utils/diagram";
@@ -90,10 +92,11 @@ const orbitTarget: [number, number, number] = [
 	0,
 	(window.innerHeight - 60) / 2,
 ];
-const cameraDistanceScale = 2;
+const cameraDistanceScale = 2.1;
+const cameraHeightScale = 2.7;
 const cameraPosition: [number, number, number] = [
 	orbitTarget[0] + 80 * cameraDistanceScale,
-	80 * cameraDistanceScale,
+	80 * cameraDistanceScale * cameraHeightScale,
 	orbitTarget[2] + 160 * cameraDistanceScale,
 ];
 
@@ -146,3 +149,9 @@ const subSurfaceLoop = computed(() =>
 	),
 );
 </script>
+
+<style scoped>
+.knot-viewer {
+	position: relative;
+}
+</style>

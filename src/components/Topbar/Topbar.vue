@@ -10,30 +10,15 @@
 			ref="fileInput"
 		/>
 
-		<div>
+		<div v-if="controlsStore.activeTab === 'drawing'">
 			Hold <span class="key">Shift</span> to move knot as one,
 			<span class="key">Alt</span> to remove points
 		</div>
-
-		<div class="spacer" style="flex-grow: 1"></div>
-
-		<label style="user-select: none">
-			<input
-				type="checkbox"
-				id="toggle-surfaces"
-				v-model="controlsStore.showSurfaces"
-			/>
-			Show Surfaces
-		</label>
-
-		<label style="user-select: none">
-			<input
-				type="checkbox"
-				id="toggle-surfaces"
-				v-model="controlsStore.showSurfacesIntersections"
-			/>
-			Show Surfaces Intersections
-		</label>
+		<div v-else>
+			Click an <span class="key">arrow</span> to control the Subsurface
+			loop's direction. Click a <span class="key">point</span> to force
+			the Subsurface loop through it.
+		</div>
 	</div>
 </template>
 
