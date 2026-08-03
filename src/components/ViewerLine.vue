@@ -27,6 +27,9 @@ const props = defineProps<{
 	pointsColor?: string | number;
 	width?: number;
 	noDepthTest?: boolean;
+	// Appends the first point back onto the end, so the line segment closing the loop
+	// actually gets drawn - Line2 only ever connects consecutive points it's given.
+	closed?: boolean;
 }>();
 
 const pointsCoords = computed(() => props.points.map((point) => point.coords));
@@ -41,6 +44,9 @@ const lineObject = computed(() => {
 	const points = props.points.map(
 		(point) => new THREE.Vector3(...point.coords)
 	);
+	if (props.closed && points.length > 2) {
+		points.push(points[0]);
+	}
 
 	const geometry = new LineGeometry();
 	geometry.setPositions(points.map((point) => point.toArray()).flat());

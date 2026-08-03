@@ -10,7 +10,7 @@ function isStartingPoint(point: Point) {
     return point.id.endsWith('-0');
 }
 
-function isClosingPoint(point: Point) {
+export function isClosingPoint(point: Point) {
     return point.id.endsWith(CLOSING_POINT_ID);
 }
 

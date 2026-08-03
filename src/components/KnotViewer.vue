@@ -54,6 +54,7 @@ import { TresCanvas, extend } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import { useControlsStore } from "../data/controls";
+import { useSubsurfaceWalkStore } from "../data/subsurface-walk";
 import { get3DKnots, getDiagram } from "../utils/diagram";
 import {
 	getKnotsSurfacesIntersections,
@@ -70,6 +71,7 @@ const props = defineProps<{
 }>();
 
 const controlsStore = useControlsStore();
+const subsurfaceWalkStore = useSubsurfaceWalkStore();
 
 const diagram = computed(() => getDiagram(props.drawingData));
 const knots3D = computed(() => get3DKnots(diagram.value));
@@ -138,6 +140,9 @@ const surfaceIntersectionsLines = computed(() => {
 });
 
 const subSurfaceLoop = computed(() =>
-	getSubSurfaceIntersectionsLoop(knots3D.value),
+	getSubSurfaceIntersectionsLoop(
+		knots3D.value,
+		subsurfaceWalkStore.crossingWalkDirections,
+	),
 );
 </script>

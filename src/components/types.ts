@@ -17,7 +17,7 @@ export type Intersection = {
     isWithinKnot: boolean;
 }
 
-// Note: Diagram means that it is in 2D but after calculating intersections and adding extra points
+// "Diagram" = 2D, after intersections/extra points are added (vs. raw Knot/Point).
 export type DiagramPoint = Coords2D & {
     id: string;
     knotId: string;
@@ -81,7 +81,15 @@ export type SubSurfacesKnot = Omit<Knot3D, 'points'> & {
     points: SubSurfacesPoint[];
 }
 
-// The actual subsurface loop that is not originated from the drawing
+// The walked loop itself - not sourced from the drawing.
 export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot'> & {
     id: string;
 }
+
+// Which knot's role (fixed "lower"/"upper" per crossing, see getCrossingRole) the subsurface
+// walk continues on from a crossing point, and forward/backward once there. Defaults to
+// "upperForward".
+export type CrossingWalkDirection = "lowerForward" | "lowerBackward" | "upperForward" | "upperBackward";
+
+// Keyed by crossing id (see getCrossingId), not by point.
+export type CrossingWalkDirections = Map<string, CrossingWalkDirection>;

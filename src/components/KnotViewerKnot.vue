@@ -4,6 +4,7 @@
 		:color="lineColor"
 		:pointsColor="pointsColor"
 		:width="lineWidth"
+		:closed="isClosed"
 	/>
 	<ViewerTriangle
 		v-for="triangle in triangles3D"
@@ -49,6 +50,13 @@ const pointsColor = computed(() => {
 	if (props.showSurfaces) return 0xdddddd;
 	return tinycolor(props.surfaceColor).lighten(20).toString();
 });
+
+// Only a SubSurface (the subsurface loop) needs ViewerLine to add its own closing
+// segment: its walk has no notion of a duplicate closing point, unlike Knot3D/
+// SubSurfacesKnot, whose point lists already end with one for a closed knot
+// (combineKnotPointsWithIntersections in drawing.ts) - asking ViewerLine to close those
+// too would draw a second, redundant closing segment on top of that existing one.
+const isClosed = computed(() => !("diagramKnot" in props.knot));
 
 const triangles3D = computed(() => {
 	if (!props.showSurfaces) return [];

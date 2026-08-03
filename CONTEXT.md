@@ -31,12 +31,49 @@ board is showing and what it's for*)
 
 **Subsurface walk**:
 The graph-walk that produces a `SubSurface` (see [AGENTS.md](./AGENTS.md)) — starting at a
-point and, at each crossing between two knots' surfaces, either continuing straight or jumping
-to the crossing's twin point. Currently the walk's start point and its turn choice at each
-crossing are hardcoded (`getSubSurfaceIntersectionsLoop` always starts at the first knot's
-first point, and always jumps to a twin when one exists). The **Subsurface tab** exists to
-eventually make these two choices user-controlled by clicking on its board — the board now
-*displays* the resulting loop, but clicking to redirect the walk isn't built yet.
+point and, at each **crossing point**, resolving that crossing's **crossing walk direction** to
+decide whether to continue straight or jump to the crossing's twin point. Because the resulting
+loop is closed, the walk's own starting point is never user-facing or meaningful on its own —
+internally, any crossing point can seed it (picked deterministically), since every crossing
+point already resolves to a direction one way or another.
+
+**Going forward on a knot**:
+Stepping from one point to the next in a knot's own points array, wrapping at the end for a
+closed knot — the same order the points were originally listed/drawn in. *Backward* is the same
+step in reverse (to the previous point). This is the primitive both a **crossing walk direction**
+and an **arrival direction** build their own forward/backward on, and it's also why a knot's own
+line (`Line.p1`/`p2`, see `drawing.ts`) always has `p1` before `p2` in this same order — lines are
+built directly from consecutive knot points.
+
+**Crossing walk direction**:
+The choice of which way the **Subsurface walk** continues from a **crossing point**. Every
+crossing has two points, one on each of the two knots involved, and each is assigned a fixed
+"lower" or "upper" role from the crossing's own data (reusing the drawing's existing over/under
+choice where the crossing sits at a real 2D intersection) — unlike the walk's own position, this
+role never changes depending on which side the walk happens to arrive from. A direction names
+which role's knot the walk should continue on: stay if it's already there, or cross to the other
+point if it isn't, then forward or backward from there — four possible directions, of which three
+are ever offered at once, since the fourth would exactly retrace the crossing's own **arrival
+direction**. Shown as a clickable arrow on the **Subsurface board**, next to each crossing point
+that's part of the currently displayed loop *and* sits at a real 2D intersection between the two
+knots involved — a knot's surface also grows small bridging triangles around every 2D intersection
+to cover the height change between over/under levels, and one of those triangles' own far edges
+can independently produce a second, nearby crossing point that isn't at the 2D intersection at
+all; that one is still walked (using its default direction) but never gets its own arrow. Clicking
+an arrow cycles to the next of the three alternatives. Every crossing point has a crossing walk
+direction at all times, defaulting to "cross to the upper knot, then forward" until the user
+overrides it by clicking. All crossing walk directions reset to their defaults each time the
+Subsurface tab is activated, since the knots — and therefore the crossings — can't change while
+that tab is showing.
+
+**Arrival direction**:
+The role and forward/backward step describing which line the **Subsurface walk** was actually
+travelling along, and which way, in the step immediately before it reached a given crossing point
+— backward-looking, in contrast to a **crossing walk direction**, which is forward-looking (it
+names where the walk goes *next*, and can name either knot regardless of which one the walk
+actually arrived on). Same shape as a crossing walk direction, but a different value in general —
+used only to identify the one of the crossing's four possible crossing walk directions that would
+exactly retrace the arrival, so the arrow never offers it.
 
 **Subsurface loop**:
 The `SubSurface` a subsurface walk produces — an ordered sequence of points that alternates
