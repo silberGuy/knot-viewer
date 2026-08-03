@@ -12,25 +12,21 @@
 				@removeKnot="onRemoveKnot(index)"
 				@dragEnd="emit('rerender')"
 			/>
-			<DrawingIntersection
-				v-for="inter in linesIntersections"
-				:topLine="inter.topLine"
-				:intersectionPoint="inter.point"
-				:lineColor="
-					knots.find((k) => k.id === inter.topLine.knotId)?.color || 'black'
-				"
-				@click.stop="flipIntersection(inter.id)"
+			<KnotIntersections
+				:knots="knots"
+				:interFlipIds="interFlipIds"
+				@flip="flipIntersection"
 			/>
 		</svg>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import type { Knot, Coords2D } from "./types.ts";
-import DrawingIntersection from "./DrawingIntersection.vue";
 import DrawingKnot from "./DrawingKnot.vue";
-import { computeIntersections, getSvgCoords } from "../utils/drawing";
+import KnotIntersections from "./KnotIntersections.vue";
+import { getSvgCoords } from "../utils/drawing";
 import { useMousePressed, useThrottleFn } from "@vueuse/core";
 import { knotsColors } from "../data/colors.ts";
 
@@ -89,10 +85,6 @@ const addPoint = useThrottleFn((coords: Coords2D) => {
 	});
 	emit("rerender");
 }, 100);
-
-const linesIntersections = computed(() =>
-	computeIntersections(knots.value, interFlipIds.value)
-);
 
 function flipIntersection(intersectionId: string) {
 	if (interFlipIds.value.has(intersectionId)) {

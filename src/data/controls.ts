@@ -1,17 +1,20 @@
+import { computed, ref } from 'vue';
 import { defineStore } from 'pinia'
 import { useToggle } from '@vueuse/core';
 
 export const useControlsStore = defineStore('showSurfaces', () => {
     const [showSurfaces, toggleShowSurfaces] = useToggle(true);
-    const [showSubSurface, toggleShowSubSurface] = useToggle(false);
     const [showSurfacesIntersections, toggleShowSurfacesIntersections] = useToggle(false);
+
+    const activeTab = ref<"drawing" | "subsurface">("drawing");
+    const isSubSurfaceActive = computed(() => activeTab.value === "subsurface");
 
     return {
         showSurfaces,
         toggleShowSurfaces,
-        showSubSurface,
-        toggleShowSubSurface,
         showSurfacesIntersections,
         toggleShowSurfacesIntersections,
+        activeTab,
+        isSubSurfaceActive,
     }
 });

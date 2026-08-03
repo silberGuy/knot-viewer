@@ -1,5 +1,5 @@
 import { Ray, Vector3 } from "three";
-import type { DiagramPoint, Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { CrossingWalkDirection, CrossingWalkDirections, DiagramPoint, Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
 import { getSurfaceLevels } from "./surfaces";
 import { getKnotTriangles } from "./diagram";
 
@@ -197,47 +197,295 @@ export function combineKnotsWithSurfaceIntersections(knots: Knot3D[]): SubSurfac
     return knotsWithSubSurfacePoints;
 }
 
-export function getSubSurfaceIntersectionsLoop(knots: Knot3D[]): SubSurface {
+// Order-independent id for a crossing (same for both of its points) - used to key
+// CrossingWalkDirections by crossing, not by point.
+export function getCrossingId(point: SubSurfacesPoint): string | undefined {
+    const twinPointId = point.surfaceIntersection?.twinPointId;
+    if (!twinPointId) return undefined;
+    return [point.id, twinPointId].sort().join("::");
+}
+
+// Seeds every crossing with DEFAULT_CROSSING_WALK_DIRECTION.
+export function getDefaultCrossingWalkDirections(knots: Knot3D[]): CrossingWalkDirections {
     const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
-
-    const newKnotPoints: SubSurfacesPoint[] = [];
-    const visitedPointIds: Set<string> = new Set();
-    const walk = (currentKnot: SubSurfacesKnot, currentPointIndex: number, justJumpedTwin = false) => {
-        const currentPoint = currentKnot.points[currentPointIndex % currentKnot.points.length];
-        if (!currentPoint || visitedPointIds.has(currentPoint.id)) {
-            return;
-        }
-        newKnotPoints.push({ ...currentPoint, coords: [currentPoint.coords[0] + 1, currentPoint.coords[1] + 1, currentPoint.coords[2]] as [number, number, number] });
-        visitedPointIds.add(currentPoint.id);
-
-        const twinPointId = currentPoint.surfaceIntersection?.twinPointId;
-        if (twinPointId && !justJumpedTwin) {
-            const twinKnot = knotsWithSubSurfacePoints.find(k => k.points.some(p => p.id === twinPointId));
-            if (!twinKnot) {
-                console.error('Could not find twin knot for point', currentPoint);
-                return;
+    const directions: CrossingWalkDirections = new Map();
+    for (const knot of knotsWithSubSurfacePoints) {
+        for (const point of knot.points) {
+            const crossingId = getCrossingId(point);
+            if (crossingId && !directions.has(crossingId)) {
+                directions.set(crossingId, DEFAULT_CROSSING_WALK_DIRECTION);
             }
-            const twinPointIndex = twinKnot.points.findIndex(p => p.id === twinPointId);
-            if (twinPointIndex === -1) {
-                console.log('KNOT', twinKnot);
-                console.log('point', currentPoint);
-            }
-
-            walk(twinKnot, twinPointIndex, true);
-            return;
         }
-        walk(currentKnot, (currentPointIndex + 1) % currentKnot.points.length);
+    }
+    return directions;
+}
+
+function stepIndex(index: number, direction: 1 | -1, length: number) {
+    return (index + direction + length) % length;
+}
+
+export function directionToStep(direction: CrossingWalkDirection): 1 | -1 {
+    return direction === "lowerBackward" || direction === "upperBackward" ? -1 : 1;
+}
+
+export function directionToRole(direction: CrossingWalkDirection): "lower" | "upper" {
+    return direction === "lowerForward" || direction === "lowerBackward" ? "lower" : "upper";
+}
+
+// The constructor counterpart to directionToRole/directionToStep - builds a direction from
+// its parts instead of decomposing an existing one.
+export function directionFromRoleAndStep(role: "lower" | "upper", step: 1 | -1): CrossingWalkDirection {
+    if (role === "lower") return step === 1 ? "lowerForward" : "lowerBackward";
+    return step === 1 ? "upperForward" : "upperBackward";
+}
+
+// Arbitrary but fixed default (see ADR 0003); user-overridable per crossing.
+const DEFAULT_CROSSING_WALK_DIRECTION: CrossingWalkDirection = "upperForward";
+
+// ---- The walk itself -------------------------------------------------------------------
+// An explicit state machine: advance() = next step, runWalk() = stop condition,
+// getWalkStart() = origin.
+
+// Current point (knot + index) and step direction. justArrivedViaJump is true for exactly
+// one state - right after landing on a twin - so that landing point doesn't re-resolve the
+// same crossing and jump straight back where it came from.
+type WalkState = {
+    knot: SubSurfacesKnot;
+    pointIndex: number;
+    step: 1 | -1;
+    justArrivedViaJump: boolean;
+};
+
+function currentPoint(state: WalkState): SubSurfacesPoint {
+    return state.knot.points[state.pointIndex];
+}
+
+// Next state: resolves the current point's crossing direction if it has one (unless this
+// is a jump landing), else just steps forward. undefined only on inconsistent data (twin
+// knot not found) - the caller treats that as "stop".
+function advance(
+    state: WalkState,
+    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    crossingWalkDirections: CrossingWalkDirections,
+): WalkState | undefined {
+    const point = currentPoint(state);
+    const crossingId = state.justArrivedViaJump ? undefined : getCrossingId(point);
+
+    if (!crossingId) {
+        return {
+            ...state,
+            pointIndex: stepIndex(state.pointIndex, state.step, state.knot.points.length),
+            justArrivedViaJump: false,
+        };
     }
 
-    walk(knotsWithSubSurfacePoints[0], 0);
+    const direction = crossingWalkDirections.get(crossingId) ?? DEFAULT_CROSSING_WALK_DIRECTION;
+    const step = directionToStep(direction);
+
+    if (directionToRole(direction) === getCrossingRole(point)) {
+        return {
+            knot: state.knot,
+            pointIndex: stepIndex(state.pointIndex, step, state.knot.points.length),
+            step,
+            justArrivedViaJump: false,
+        };
+    }
+
+    const twinPointId = point.surfaceIntersection!.twinPointId!;
+    const twinKnot = knotsWithSubSurfacePoints.find(k => k.points.some(p => p.id === twinPointId));
+    if (!twinKnot) {
+        console.error('Could not find twin knot for point', point);
+        return undefined;
+    }
+    const twinPointIndex = twinKnot.points.findIndex(p => p.id === twinPointId);
+    return { knot: twinKnot, pointIndex: twinPointIndex, step, justArrivedViaJump: true };
+}
+
+// Walks from `start` until it revisits a point (loop closes) or the data runs out.
+function runWalk(
+    start: WalkState,
+    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    crossingWalkDirections: CrossingWalkDirections,
+): SubSurfacesPoint[] {
+    const points: SubSurfacesPoint[] = [];
+    const visitedIds = new Set<string>();
+
+    let state: WalkState | undefined = start;
+    while (state) {
+        const point = currentPoint(state);
+        if (!point || visitedIds.has(point.id)) break;
+        points.push(point);
+        visitedIds.add(point.id);
+        state = advance(state, knotsWithSubSurfacePoints, crossingWalkDirections);
+    }
+
+    return points;
+}
+
+// Starting point is never user-facing (a closed loop has no beginning) *unless* the user
+// explicitly picked one by clicking a point on the Subsurface board (selectedStartPointId,
+// found forward from - see "Going forward on a knot"). Absent that, any crossing works as an
+// anchor - the lowest crossing id, for a stable result. Starts on whichever of the anchor's
+// two points (see getCrossingRole) its own resolved direction targets - a fixed choice, not
+// "whichever knot happens to be found first" (see ADR 0003). Falls back to a fixed first
+// point when there are no crossings to anchor on either.
+function getWalkStart(
+    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    crossingWalkDirections: CrossingWalkDirections,
+    selectedStartPointId?: string,
+): WalkState {
+    if (selectedStartPointId) {
+        for (const knot of knotsWithSubSurfacePoints) {
+            const pointIndex = knot.points.findIndex(p => p.id === selectedStartPointId);
+            if (pointIndex !== -1) return { knot, pointIndex, step: 1, justArrivedViaJump: false };
+        }
+    }
+
+    const crossingIds = new Set<string>();
+    for (const knot of knotsWithSubSurfacePoints) {
+        for (const point of knot.points) {
+            const crossingId = getCrossingId(point);
+            if (crossingId) crossingIds.add(crossingId);
+        }
+    }
+
+    if (crossingIds.size > 0) {
+        const anchorId = [...crossingIds].sort()[0];
+        const direction = crossingWalkDirections.get(anchorId) ?? DEFAULT_CROSSING_WALK_DIRECTION;
+        const step = directionToStep(direction);
+        const targetRole = directionToRole(direction);
+
+        for (const knot of knotsWithSubSurfacePoints) {
+            const pointIndex = knot.points.findIndex(
+                p => getCrossingId(p) === anchorId && getCrossingRole(p) === targetRole,
+            );
+            if (pointIndex === -1) continue;
+            return { knot, pointIndex, step, justArrivedViaJump: false };
+        }
+    }
+
+    return { knot: knotsWithSubSurfacePoints[0], pointIndex: 0, step: 1, justArrivedViaJump: false };
+}
+
+export function getSubSurfaceIntersectionsLoop(
+    knots: Knot3D[],
+    crossingWalkDirections: CrossingWalkDirections = new Map(),
+    selectedStartPointId?: string,
+): SubSurface {
+    if (knots.length === 0) {
+        return { id: 'sub-surface-empty', points: [], surfaceTriangles: [] };
+    }
+
+    const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
+    const start = getWalkStart(knotsWithSubSurfacePoints, crossingWalkDirections, selectedStartPointId);
+    const walkedPoints = runWalk(start, knotsWithSubSurfacePoints, crossingWalkDirections);
 
     const result: SubSurface = {
         id: `sub-surface-${knots.map(k => k.diagramKnot.id).join('_')}`,
-        points: newKnotPoints,
-        surfaceTriangles: []
+        // Nudged slightly off of the knots' own lines so the overlay doesn't sit exactly
+        // on top of them.
+        points: walkedPoints.map(point => ({
+            ...point,
+            coords: [point.coords[0] + 1, point.coords[1] + 1, point.coords[2]] as [number, number, number],
+        })),
+        surfaceTriangles: [],
     };
     result.surfaceTriangles = getSubSurfaceTriangles(result);
     return result;
+}
+
+// Diagram points keep their 2D position; crossing points project from 3D (x/z -> x/y,
+// mirroring get3DKnots in diagram.ts).
+export function projectSubSurfacesPoint(point: SubSurfacesPoint): { x: number; y: number } {
+    return point.diagramPoint
+        ? { x: point.diagramPoint.x, y: point.diagramPoint.y }
+        : { x: point.coords[0], y: point.coords[2] };
+}
+
+type ArrowLine = { p1: { x: number; y: number }; p2: { x: number; y: number } };
+
+export type CrossingWalkArrow = {
+    crossingId: string;
+    // Intersection.point - not a loop point's projected position (see getCrossingWalkArrows).
+    position: { x: number; y: number };
+    currentDirection: CrossingWalkDirection;
+    // The knot lines the crossing's "lower"/"upper" role options point along (see
+    // CrossingWalkArrow.vue) - p1 is always the forward end (see "Going forward on a knot"
+    // in CONTEXT.md).
+    topLine: ArrowLine;
+    bottomLine: ArrowLine;
+};
+
+export const ALL_DIRECTIONS: CrossingWalkDirection[] = ["lowerForward", "lowerBackward", "upperForward", "upperBackward"];
+
+// The real 2D Intersection this crossing's edge touches, if any - some crossings come from
+// a bridging triangle's far edge instead (see CONTEXT.md's "Crossing point") and have none.
+// isWithinKnot excluded: that's a knot's own self-crossing, not a between-knot one.
+function findRealIntersection(surfaceIntersection: NonNullable<SubSurfacesPoint["surfaceIntersection"]>) {
+    const fromP1 = surfaceIntersection.lineP1.diagramPoint.intersection;
+    if (fromP1 && !fromP1.isWithinKnot) return fromP1;
+    const fromP2 = surfaceIntersection.lineP2.diagramPoint.intersection;
+    if (fromP2 && !fromP2.isWithinKnot) return fromP2;
+    return undefined;
+}
+
+// A crossing point's fixed lower/upper side, independent of walk position (see ADR 0003).
+// Reuses the drawn over/under (topLineKnotId/bottomLineKnotId) at a real intersection;
+// otherwise falls back to a fixed id tie-break (no user-facing arrow there anyway).
+export function getCrossingRole(point: SubSurfacesPoint): "lower" | "upper" | undefined {
+    const surfaceIntersection = point.surfaceIntersection;
+    const twinPointId = surfaceIntersection?.twinPointId;
+    if (!surfaceIntersection || !twinPointId) return undefined;
+
+    const realIntersection = findRealIntersection(surfaceIntersection);
+    if (realIntersection) {
+        if (surfaceIntersection.triangle.knotId === realIntersection.bottomLineKnotId) return "lower";
+        if (surfaceIntersection.triangle.knotId === realIntersection.topLineKnotId) return "upper";
+    }
+
+    return point.id < twinPointId ? "lower" : "upper";
+}
+
+// One arrow per crossing across every knot that sits at a real 2D intersection - not just
+// ones the currently displayed loop happens to pass through (CrossingWalkArrow.vue tells the
+// two apart via its own walkPoints lookup, and styles off-loop ones differently) - positioned
+// at that intersection's own point (fixed, unlike either of the crossing's two
+// SubSurfacesPoints), and carrying that intersection's own topLine/bottomLine geometry -
+// CrossingWalkArrow.vue derives the arrival direction (see CONTEXT.md), which options to
+// exclude, and the facing angle from these directly. Crossings not at a real intersection
+// still resolve (via their default) but get no arrow.
+export function getCrossingWalkArrows(
+    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    crossingWalkDirections: CrossingWalkDirections,
+): CrossingWalkArrow[] {
+    const arrows: CrossingWalkArrow[] = [];
+    const seenCrossingIds = new Set<string>();
+
+    for (const knot of knotsWithSubSurfacePoints) {
+        for (const point of knot.points) {
+            const crossingId = getCrossingId(point);
+            if (!crossingId || seenCrossingIds.has(crossingId)) continue;
+            seenCrossingIds.add(crossingId);
+            const realIntersection = point.surfaceIntersection && findRealIntersection(point.surfaceIntersection);
+            if (!realIntersection) continue;
+
+            arrows.push({
+                crossingId,
+                position: { x: realIntersection.point.x, y: realIntersection.point.y },
+                currentDirection: crossingWalkDirections.get(crossingId) ?? DEFAULT_CROSSING_WALK_DIRECTION,
+                topLine: {
+                    p1: { x: realIntersection.topLine.p1.x, y: realIntersection.topLine.p1.y },
+                    p2: { x: realIntersection.topLine.p2.x, y: realIntersection.topLine.p2.y },
+                },
+                bottomLine: {
+                    p1: { x: realIntersection.bottomLine.p1.x, y: realIntersection.bottomLine.p1.y },
+                    p2: { x: realIntersection.bottomLine.p2.x, y: realIntersection.bottomLine.p2.y },
+                },
+            });
+        }
+    }
+
+    return arrows;
 }
 
 export function getSurfaceIntersectionsPairs(intersections: SubSurfacesPoint[]): [SubSurfacesPoint, SubSurfacesPoint][] {

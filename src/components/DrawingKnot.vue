@@ -1,35 +1,42 @@
 <template>
-	<DrawingLine
-		v-for="(line, index) in lines"
-		:key="'line-' + index"
-		:index="index"
-		:line="line"
-		@click.stop="onLineClick(line, $event)"
+	<KnotShape
+		:id="id"
+		:points="points"
+		:isClosed="isClosed"
 		:color="props.color"
-	/>
-	<DrawingPoint
-		v-for="(point, index) in points"
-		:key="'point-' + index"
-		:coords="point"
-		:id="point.id"
-		:color="props.color"
-		@update:coords="
-			(newCoords) => (points[index] = { ...points[index], ...newCoords })
-		"
-		@click.stop="onPointClick(index)"
-		@moveKnot="onMoveKnot"
-		@click.alt.stop="removePoint(index)"
-		@click.shift.alt.stop="emit('removeKnot')"
-		@dragEnd="emit('dragEnd')"
-	/>
+	>
+		<template #line="{ line }">
+			<DrawingLine
+				:line="line"
+				:color="props.color"
+				@click.stop="onLineClick(line, $event)"
+			/>
+		</template>
+		<template #point="{ point, index }">
+			<DrawingPoint
+				:coords="point"
+				:id="point.id"
+				:color="props.color"
+				@update:coords="
+					(newCoords) => (points[index] = { ...points[index], ...newCoords })
+				"
+				@click.stop="onPointClick(index)"
+				@moveKnot="onMoveKnot"
+				@click.alt.stop="removePoint(index)"
+				@click.shift.alt.stop="emit('removeKnot')"
+				@dragEnd="emit('dragEnd')"
+			/>
+		</template>
+	</KnotShape>
 </template>
 
 <script setup lang="ts">
-import { computed, toRefs } from "vue";
+import { toRefs } from "vue";
 import type { Line, Point } from "./types.ts";
 import DrawingLine from "./DrawingLine.vue";
-import { getKnotLines, getSvgCoords } from "../utils/drawing.ts";
+import { getSvgCoords } from "../utils/drawing.ts";
 import DrawingPoint from "./DrawingPoint.vue";
+import KnotShape from "./KnotShape.vue";
 
 const props = defineProps<{
 	id: string;
@@ -50,14 +57,6 @@ const { id } = toRefs(props);
 const isClosed = defineModel<boolean>("isClosed", {
 	type: Boolean,
 	default: false,
-});
-
-const lines = computed(() => {
-	return getKnotLines({
-		id: id.value,
-		points: points.value,
-		isClosed: isClosed.value,
-	});
 });
 
 function onPointClick(index: number) {

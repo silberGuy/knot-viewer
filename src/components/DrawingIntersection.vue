@@ -1,5 +1,5 @@
 <template>
-	<g class="intersection">
+	<g class="intersection" :class="{ clickable }">
 		<circle
 			:cx="intersectionPoint.x"
 			:cy="intersectionPoint.y"
@@ -26,11 +26,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Coords2D, Line } from "./types";
-const props = defineProps<{
-	topLine: Line;
-	intersectionPoint: Coords2D;
-	lineColor?: string;
-}>();
+const props = withDefaults(
+	defineProps<{
+		topLine: Line;
+		intersectionPoint: Coords2D;
+		lineColor?: string;
+		clickable?: boolean;
+	}>(),
+	{ clickable: true }
+);
 
 const length = 13;
 const u = computed(() => {
@@ -59,7 +63,7 @@ const shortLinePoint2 = computed(() => {
 </script>
 
 <style scoped>
-.intersection {
+.intersection.clickable {
 	cursor: pointer;
 }
 </style>

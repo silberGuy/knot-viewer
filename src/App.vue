@@ -1,14 +1,36 @@
 <template>
 	<div class="app-layout">
-		<DrawingBoard
-			v-model:knots="drawingData.knots"
-			v-model:interFlipIds="drawingData.interFlipIds"
-			@rerender="updateViewerData"
-		/>
+		<div class="board-pane">
+			<div class="board-tabs">
+				<button
+					:class="{ active: controlsStore.activeTab === 'drawing' }"
+					@click="controlsStore.activeTab = 'drawing'"
+				>
+					Drawing
+				</button>
+				<button
+					:class="{ active: controlsStore.activeTab === 'subsurface' }"
+					@click="controlsStore.activeTab = 'subsurface'"
+				>
+					Subsurface
+				</button>
+			</div>
+			<DrawingBoard
+				v-if="controlsStore.activeTab === 'drawing'"
+				v-model:knots="drawingData.knots"
+				v-model:interFlipIds="drawingData.interFlipIds"
+				@rerender="updateViewerData"
+			/>
+			<SubsurfaceBoard
+				v-else
+				:knots="drawingDataForViewer.knots"
+				:interFlipIds="drawingDataForViewer.interFlipIds"
+			/>
+		</div>
 		<KnotViewer
 			:drawingData="drawingDataForViewer"
 			:key="`${drawingData.knots.map((knot) => knot.id).join('-')}_${
-				controlsStore.showSubSurface
+				controlsStore.isSubSurfaceActive
 			}`"
 		/>
 		<Topbar
@@ -24,6 +46,7 @@ import { computed, ref } from "vue";
 import cloneDeep from "clone-deep";
 import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
+import SubsurfaceBoard from "./components/SubsurfaceBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 import Topbar from "./components/Topbar/Topbar.vue";
 import { useControlsStore } from "./data/controls";
@@ -34,9 +57,7 @@ const drawingStore = useDrawingStore();
 
 const drawingData = computed(() => drawingStore.getDrawingData());
 
-const drawingDataForViewer = ref<DrawingData>(
-	getCenteredData(cloneDeep(drawingData.value))
-);
+const drawingDataForViewer = ref<DrawingData>(cloneDeep(drawingData.value));
 
 function onLoadData(value: DrawingData) {
 	drawingStore.setDrawingData(value);
@@ -44,28 +65,7 @@ function onLoadData(value: DrawingData) {
 }
 
 function updateViewerData() {
-	drawingDataForViewer.value = getCenteredData(cloneDeep(drawingData.value));
-}
-
-function getCenteredData(data: DrawingData): DrawingData {
-	const allPoints = data.knots.flatMap((knot) => knot.points);
-	if (allPoints.length === 0) return data;
-	const minX = Math.min(...allPoints.map((pt) => pt.x));
-	const minY = Math.min(...allPoints.map((pt) => pt.y));
-	const maxX = Math.max(...allPoints.map((pt) => pt.x));
-	const maxY = Math.max(...allPoints.map((pt) => pt.y));
-	const offsetX = minX + (maxX - minX) / 2;
-	const offsetY = minY + (maxY - minY) / 2;
-
-	const knots = data.knots.map((knot) => {
-		const points = knot.points.map((pt) => ({
-			...pt,
-			x: (pt.x - offsetX) / 2,
-			y: (pt.y - offsetY) / 2,
-		}));
-		return { ...knot, points };
-	});
-	return { ...data, knots };
+	drawingDataForViewer.value = cloneDeep(drawingData.value);
 }
 </script>
 
@@ -84,5 +84,37 @@ function getCenteredData(data: DrawingData): DrawingData {
 
 .topbar {
 	grid-area: top;
+}
+
+.board-pane {
+	grid-area: drawing;
+	position: relative;
+	min-height: 0;
+}
+
+.board-tabs {
+	position: absolute;
+	top: 0.75em;
+	left: 1em;
+	z-index: 1;
+	display: flex;
+	gap: 0.25em;
+	padding: 0.25em;
+	background: lightblue;
+	border-radius: 8px;
+}
+
+.board-tabs button {
+	padding: 0.4em 1em;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	border-radius: 6px;
+	font-weight: bold;
+	color: #333;
+}
+
+.board-tabs button.active {
+	background: #fff;
 }
 </style>
