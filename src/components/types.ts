@@ -81,8 +81,9 @@ export type SubSurfacesKnot = Omit<Knot3D, 'points'> & {
     points: SubSurfacesPoint[];
 }
 
-// The walked loop itself - not sourced from the drawing.
-export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot'> & {
+// The walked loop itself - not sourced from the drawing. Has no surfaceTriangles of its own -
+// see the Subsurface cap (SubSurfaceCap.vue) for the separate, flattened surface built from it.
+export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot' | 'surfaceTriangles'> & {
     id: string;
 }
 

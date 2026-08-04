@@ -22,6 +22,14 @@
 				:showSurfaces="false"
 				surfaceColor="#ff00ff"
 			/>
+			<SubSurfaceSurface
+				v-if="controlsStore.isSubSurfaceActive"
+				:loop="subSurfaceLoop"
+				:surfaceLevel="subSurfaceCapLevel + 5"
+				:key="subSurfaceLoop.id"
+				:visible="controlsStore.showSubSurfaceSurface"
+				color="#ff00ff"
+			/>
 			<ViewerLine
 				v-for="linePoints in surfaceIntersectionsLines"
 				:key="linePoints.id"
@@ -54,10 +62,15 @@ import type { DrawingData, SubSurfacesPoint } from "./types";
 import { TresCanvas, extend } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
+import SubSurfaceSurface from "./SubSurfaceSurface.vue";
 import ViewerControls from "./ViewerControls.vue";
 import { useControlsStore } from "../data/controls";
 import { useSubsurfaceWalkStore } from "../data/subsurface-walk";
-import { get3DKnots, getDiagram } from "../utils/diagram";
+import {
+	get3DKnots,
+	getDiagram,
+	getSurfaceLevelsCount,
+} from "../utils/diagram";
 import {
 	getKnotsSurfacesIntersections,
 	getSubSurfaceIntersectionsLoop,
@@ -148,6 +161,8 @@ const subSurfaceLoop = computed(() =>
 		subsurfaceWalkStore.crossingWalkDirections,
 	),
 );
+
+const subSurfaceCapLevel = computed(() => getSurfaceLevelsCount(diagram.value));
 </script>
 
 <style scoped>

@@ -17,8 +17,8 @@
 			</div>
 			<DrawingBoard
 				v-if="controlsStore.activeTab === 'drawing'"
-				v-model:knots="drawingData.knots"
-				v-model:interFlipIds="drawingData.interFlipIds"
+				v-model:knots="knots"
+				v-model:interFlipIds="interFlipIds"
 				@rerender="updateViewerData"
 			/>
 			<SubsurfaceBoard
@@ -43,6 +43,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { storeToRefs } from "pinia";
 import cloneDeep from "clone-deep";
 import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
@@ -54,8 +55,12 @@ import { useDrawingStore } from "./data/drawing";
 
 const controlsStore = useControlsStore();
 const drawingStore = useDrawingStore();
+const { knots, interFlipIds } = storeToRefs(drawingStore);
 
-const drawingData = computed(() => drawingStore.getDrawingData());
+const drawingData = computed<DrawingData>(() => ({
+	knots: knots.value,
+	interFlipIds: interFlipIds.value,
+}));
 
 const drawingDataForViewer = ref<DrawingData>(cloneDeep(drawingData.value));
 

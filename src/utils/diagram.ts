@@ -15,7 +15,7 @@ function getDiagramKnots(drawingData: DrawingData): NarrowDiagramKnot[] {
         }))
 }
 
-export function getKnotTriangles(knot: Omit<NarrowDiagramKnot, 'knot'>, surfaceLevels: SurfaceLevel[]): DiagramTriangle[] {
+function getKnotTriangles(knot: Omit<NarrowDiagramKnot, 'knot'>, surfaceLevels: SurfaceLevel[]): DiagramTriangle[] {
     const surfacesLevels = surfaceLevels.filter(
         (surface) => surface[0] && surface[0].knotId === knot.id
     );
@@ -192,6 +192,10 @@ function minimizeSurfaceLevels(surfaceLevels: SurfaceLevel[]): SurfaceLevel[] {
         return acc;
     }, [] as SurfaceLevel[]);
     return minimizeSurfaceLevels;
+}
+
+export function getSurfaceLevelsCount(diagram: Diagram): number {
+    return minimizeSurfaceLevels(diagram.surfaceLevels).length;
 }
 
 function get3DPoint(point: DiagramPoint, surfaceLevels: SurfaceLevel[]): Point3D {

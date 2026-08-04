@@ -97,3 +97,27 @@ knot's surface triangle. Distinguished from an ordinary loop point, which is inh
 knot's diagram and keeps that diagram point's identity. For the Subsurface board's 2D overlay,
 a crossing point's 3D coordinates are projected to a 2D position the same way any 3D point is
 (see [AGENTS.md](./AGENTS.md)) — but the point's origin is 3D, not 2D.
+
+**Subsurface surface**:
+The surface built from a Subsurface loop's own points, shown only in the Viewer (there is no 2D
+equivalent on the Subsurface board). Rendered by `SubSurfaceSurface.vue`, separate from the loop's
+own line/point rendering, and hidden/shown by its own toggle (only offered while the Subsurface
+tab is active, alongside the loop it's built from). Currently contains only the **Subsurface cap**;
+the pieces connecting that cap down to the loop's own points are future work, to be added inside
+this same component (see ADR 0004).
+_Avoid_: subsurface surface used loosely for the cap alone — the cap is one piece of this, not a
+synonym for it
+
+**Subsurface cap**:
+A flat, triangulated piece of the **Subsurface surface**, built by flattening every one of a
+Subsurface loop's own points to its x/z position (the same projection a crossing point already
+uses). Wherever the loop contains both halves of a drawn knot **Intersection** (see `AGENTS.md`)
+without that being one of the loop's own **crossing points**, the two halves flatten to the same
+coordinate and the loop splits there into the two arcs between them — expected, ordinary behavior,
+not an error — so each resulting simple sub-loop can be triangulated on its own with a single
+Earcut fan (see ADR 0004). Every point of every triangulation is then lifted to one shared height —
+one **surface level** (see [AGENTS.md](./AGENTS.md)) above the highest level any knot currently
+occupies. Unlike the loop itself, the cap does not keep each point's own real height, and it is not
+connected down to the loop's real points — both are deliberate, and the latter is future work (see
+ADR 0004). Rendered by its own component (`SubSurfaceCap.vue`), used by `SubSurfaceSurface.vue`.
+_Avoid_: cap surface (ambiguous with the loop or a knot's own surface)

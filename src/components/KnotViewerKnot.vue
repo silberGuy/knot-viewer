@@ -59,7 +59,7 @@ const pointsColor = computed(() => {
 const isClosed = computed(() => !("diagramKnot" in props.knot));
 
 const triangles3D = computed(() => {
-	if (!props.showSurfaces) return [];
+	if (!props.showSurfaces || !("surfaceTriangles" in props.knot)) return [];
 	return props.knot.surfaceTriangles.map(
 		(triangle) =>
 			triangle.points.map((point) => point.coords) as [

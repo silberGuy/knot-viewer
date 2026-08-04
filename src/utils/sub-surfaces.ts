@@ -1,7 +1,6 @@
 import { Ray, Vector3 } from "three";
-import type { CrossingWalkDirection, CrossingWalkDirections, DiagramPoint, Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
-import { getSurfaceLevels } from "./surfaces";
-import { getKnotTriangles } from "./diagram";
+import { Earcut } from "three/src/extras/Earcut.js";
+import type { CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
 
 function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
     const v = new Vector3(...a.coords);
@@ -373,25 +372,22 @@ export function getSubSurfaceIntersectionsLoop(
     selectedStartPointId?: string,
 ): SubSurface {
     if (knots.length === 0) {
-        return { id: 'sub-surface-empty', points: [], surfaceTriangles: [] };
+        return { id: 'sub-surface-empty', points: [] };
     }
 
     const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
     const start = getWalkStart(knotsWithSubSurfacePoints, crossingWalkDirections, selectedStartPointId);
     const walkedPoints = runWalk(start, knotsWithSubSurfacePoints, crossingWalkDirections);
 
-    const result: SubSurface = {
+    return {
         id: `sub-surface-${knots.map(k => k.diagramKnot.id).join('_')}`,
         // Nudged slightly off of the knots' own lines so the overlay doesn't sit exactly
         // on top of them.
         points: walkedPoints.map(point => ({
             ...point,
-            coords: [point.coords[0] + 1, point.coords[1] + 1, point.coords[2]] as [number, number, number],
+            coords: [point.coords[0], point.coords[1] + 1.5, point.coords[2]] as [number, number, number],
         })),
-        surfaceTriangles: [],
     };
-    result.surfaceTriangles = getSubSurfaceTriangles(result);
-    return result;
 }
 
 // Diagram points keep their 2D position; crossing points project from 3D (x/z -> x/y,
@@ -507,53 +503,68 @@ export function getSurfaceIntersectionsPairs(intersections: SubSurfacesPoint[]):
 }
 
 
-function getSubSurfaceTriangles(subSurfaceLoop: SubSurface): Triangle3D[] {
-    let pointsForSurfaces = subSurfaceLoop.points.map((p) =>
-        p.diagramPoint
-            ? ({ ...p.diagramPoint, knotId: subSurfaceLoop.id } as DiagramPoint)
-            : {
-                ...p,
-                knotId: subSurfaceLoop.id,
-                x: p.coords[0],
-                y: p.coords[2],
-            }
-    );
-    pointsForSurfaces = pointsForSurfaces.map((point) => {
-        if (
-            point.intersection &&
-            !pointsForSurfaces.some(
-                (other) => other.id === point.intersectionParallelId
-            )
-        ) {
-            const { intersection, isTop, intersectionParallelId, ...rest } = point;
-            return rest;
+// A drawn 2D Intersection (drawing.ts) produces two DiagramPoints at the same 2D location, one
+// per knot involved, linked via intersectionParallelId. The subsurface walk only jumps between
+// knots at its own crossing points (surfaceIntersection - where the surfaces actually pierce);
+// if the two knots at a drawn intersection don't pierce there, the walk can visit both knots'
+// copies as separate ordinary points, which flatten to the exact same (x, y). Finds the first
+// such pair still in `points`, if any.
+function findDuplicateIntersectionPair(points: SubSurfacesPoint[]): [number, number] | undefined {
+    for (let i = 0; i < points.length; i++) {
+        const parallelId = points[i].diagramPoint?.intersectionParallelId;
+        if (!parallelId) continue;
+        const j = points.findIndex((p, index) => index !== i && p.diagramPoint?.id === parallelId);
+        if (j !== -1) return i < j ? [i, j] : [j, i];
+    }
+    return undefined;
+}
+
+// Splits the loop into simple sub-loops wherever it contains both halves of a drawn Intersection
+// (see findDuplicateIntersectionPair) - the only known source of the flattened footprint
+// self-touching (confirmed against the domain model, not a general polygon-self-intersection
+// solver). Since both halves share one flattened coordinate, no new points are inserted: the loop
+// just splits into the two arcs between them, each closed back through its own copy of that shared
+// coordinate. Each arc keeps only *one* of the two duplicate points - not both - since they sit at
+// the same flattened position and an arc closes through it either way; keeping both in both arcs
+// would make each recursive call immediately re-find the very same pair at its own boundary and
+// re-split into an identical arc, never terminating. Recurses to handle more than one such pair.
+function splitLoopAtDuplicateIntersections(points: SubSurfacesPoint[]): SubSurfacesPoint[][] {
+    const pair = findDuplicateIntersectionPair(points);
+    if (!pair) return [points];
+
+    const [i, j] = pair;
+    const arcA = points.slice(i, j);
+    const arcB = [...points.slice(j), ...points.slice(0, i)];
+    return [
+        ...splitLoopAtDuplicateIntersections(arcA),
+        ...splitLoopAtDuplicateIntersections(arcB),
+    ];
+}
+
+type CapTriangle = [[number, number, number], [number, number, number], [number, number, number]];
+
+// Splits the loop wherever its flattened footprint would otherwise self-touch (see
+// splitLoopAtDuplicateIntersections), then triangulates each resulting simple sub-loop separately
+// and lifts every point to the same shared height for the given surface level (8 * surfaceLevel,
+// matching get3DPoint in diagram.ts). surfaceLevel should be one past the highest level any knot
+// currently occupies (see getSurfaceLevelsCount in diagram.ts) so the cap always sits above every
+// knot.
+export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number): CapTriangle[] {
+    const height = 8 * surfaceLevel;
+    return splitLoopAtDuplicateIntersections(loop.points).flatMap((subLoopPoints) => {
+        const flattened = subLoopPoints.map(projectSubSurfacesPoint);
+        if (flattened.length < 3) return [];
+
+        const cut = Earcut.triangulate(flattened.flatMap((p) => [p.x, p.y]), [], 2);
+        const triangles: CapTriangle[] = [];
+        for (let i = 0; i < cut.length; i += 3) {
+            const [a, b, c] = cut.slice(i, i + 3);
+            triangles.push([
+                [flattened[a].x, height, flattened[a].y],
+                [flattened[b].x, height, flattened[b].y],
+                [flattened[c].x, height, flattened[c].y],
+            ]);
         }
-        return point;
+        return triangles;
     });
-    pointsForSurfaces = pointsForSurfaces.map((p) => {
-        if (!p.intersection) return p;
-        return {
-            ...p,
-            intersection: {
-                ...p.intersection,
-                isWithinKnot: true,
-            },
-        };
-    });
-    const surfaceLevels = getSurfaceLevels(pointsForSurfaces);
-
-    const triangles = getKnotTriangles(
-        {
-            points: pointsForSurfaces,
-            id: subSurfaceLoop.id,
-        },
-        surfaceLevels
-    );
-
-    return triangles.map((t) => ({
-        ...t,
-        points: t.points.map((p) =>
-            subSurfaceLoop.points.find((sp) => sp.id === p.id)
-        ) as [Point3D, Point3D, Point3D],
-    }));
 }

@@ -17,6 +17,15 @@
 			/>
 			Show Surfaces Intersections
 		</label>
+
+		<label v-if="controlsStore.isSubSurfaceActive">
+			<input
+				type="checkbox"
+				id="toggle-subsurface-surface"
+				v-model="controlsStore.showSubSurfaceSurface"
+			/>
+			Show Subsurface Surface
+		</label>
 	</div>
 </template>
 
