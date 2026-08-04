@@ -4,6 +4,7 @@
 		:points="triangle"
 		:key="triangle.flat().join('_')"
 		:color="color"
+		:opacity="opacity"
 	/>
 </template>
 
@@ -17,6 +18,7 @@ const props = defineProps<{
 	loop: SubSurface;
 	surfaceLevel: number;
 	color?: string;
+	opacity?: number;
 	visible?: boolean;
 }>();
 

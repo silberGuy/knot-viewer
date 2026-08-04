@@ -3,12 +3,14 @@
 		:loop="loop"
 		:surfaceLevel="surfaceLevel"
 		:color="color"
+		:opacity="opacity"
 		:visible="visible"
 	/>
 	<SubSurfaceWall
 		:loop="loop"
 		:surfaceLevel="surfaceLevel"
 		:color="color"
+		:opacity="opacity"
 		:visible="visible"
 	/>
 </template>
@@ -22,6 +24,7 @@ defineProps<{
 	loop: SubSurface;
 	surfaceLevel: number;
 	color?: string;
+	opacity?: number;
 	visible?: boolean;
 }>();
 </script>

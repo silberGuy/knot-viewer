@@ -26,6 +26,18 @@
 			/>
 			Show Subsurface Surface
 		</label>
+
+		<label v-if="controlsStore.isSubSurfaceActive">
+			Subsurface Surface Opacity
+			<input
+				type="range"
+				id="subsurface-surface-opacity"
+				min="0.2"
+				max="1"
+				step="0.01"
+				v-model.number="controlsStore.subSurfaceOpacity"
+			/>
+		</label>
 	</div>
 </template>
 
