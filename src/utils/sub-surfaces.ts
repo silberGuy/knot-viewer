@@ -1,6 +1,6 @@
 import { Ray, Vector3 } from "three";
 import { Earcut } from "three/src/extras/Earcut.js";
-import type { CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubSurface, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubSurface, SubSurfaceTriangle, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
 
 function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
     const v = new Vector3(...a.coords);
@@ -541,22 +541,20 @@ function splitLoopAtDuplicateIntersections(points: SubSurfacesPoint[]): SubSurfa
     ];
 }
 
-type CapTriangle = [[number, number, number], [number, number, number], [number, number, number]];
-
 // Splits the loop wherever its flattened footprint would otherwise self-touch (see
 // splitLoopAtDuplicateIntersections), then triangulates each resulting simple sub-loop separately
 // and lifts every point to the same shared height for the given surface level (8 * surfaceLevel,
 // matching get3DPoint in diagram.ts). surfaceLevel should be one past the highest level any knot
 // currently occupies (see getSurfaceLevelsCount in diagram.ts) so the cap always sits above every
 // knot.
-export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number): CapTriangle[] {
+export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
     return splitLoopAtDuplicateIntersections(loop.points).flatMap((subLoopPoints) => {
         const flattened = subLoopPoints.map(projectSubSurfacesPoint);
         if (flattened.length < 3) return [];
 
         const cut = Earcut.triangulate(flattened.flatMap((p) => [p.x, p.y]), [], 2);
-        const triangles: CapTriangle[] = [];
+        const triangles: SubSurfaceTriangle[] = [];
         for (let i = 0; i < cut.length; i += 3) {
             const [a, b, c] = cut.slice(i, i + 3);
             triangles.push([
@@ -567,4 +565,30 @@ export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number
         }
         return triangles;
     });
+}
+
+// Builds the walls connecting the cap down to the loop's own real-height points: for every pair
+// of adjacent loop points (wrapping last back to first, since the walk is a closed ring), a
+// rectangle spans from their flattened, shared-height cap positions down to their real coords.
+// Deliberately walks the raw loop, not splitLoopAtDuplicateIntersections's simple sub-loops -
+// that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
+// of points and has no such requirement (see ADR 0005).
+export function getSubSurfaceWallTriangles(loop: SubSurface, surfaceLevel: number): SubSurfaceTriangle[] {
+    const height = 8 * surfaceLevel;
+    const { points } = loop;
+    if (points.length < 3) return [];
+
+    const triangles: SubSurfaceTriangle[] = [];
+    for (let i = 0; i < points.length; i++) {
+        const next = (i + 1) % points.length;
+        const capA = projectSubSurfacesPoint(points[i]);
+        const capB = projectSubSurfacesPoint(points[next]);
+        const a: [number, number, number] = [capA.x, height, capA.y];
+        const b: [number, number, number] = [capB.x, height, capB.y];
+        const loopA = points[i].coords;
+        const loopB = points[next].coords;
+
+        triangles.push([a, b, loopB], [a, loopB, loopA]);
+    }
+    return triangles;
 }

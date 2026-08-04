@@ -87,6 +87,9 @@ export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot' | 'surfaceTriangles
     id: string;
 }
 
+// A single triangle of the Subsurface surface (cap or wall), as three raw [x, y, z] tuples.
+export type SubSurfaceTriangle = [[number, number, number], [number, number, number], [number, number, number]];
+
 // Which knot's role (fixed "lower"/"upper" per crossing, see getCrossingRole) the subsurface
 // walk continues on from a crossing point, and forward/backward once there. Defaults to
 // "upperForward".
