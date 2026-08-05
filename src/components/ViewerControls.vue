@@ -28,6 +28,15 @@
 		</label>
 
 		<label v-if="controlsStore.isSubSurfaceActive">
+			<input
+				type="checkbox"
+				id="toggle-subsurface-cap"
+				v-model="controlsStore.showSubSurfaceCap"
+			/>
+			Show Subsurface Cap
+		</label>
+
+		<label v-if="controlsStore.isSubSurfaceActive">
 			Subsurface Surface Opacity
 			<input
 				type="range"

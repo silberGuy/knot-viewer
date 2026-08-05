@@ -34,6 +34,7 @@
 				:surfaceLevel="subSurfaceCapLevel + 5"
 				:key="subSurfaceLoop.id"
 				:visible="controlsStore.showSubSurfaceSurface"
+				:capVisible="controlsStore.showSubSurfaceCap"
 				:opacity="controlsStore.subSurfaceOpacity"
 				color="#ff00ff"
 			/>

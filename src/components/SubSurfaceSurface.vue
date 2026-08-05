@@ -4,7 +4,7 @@
 		:surfaceLevel="surfaceLevel"
 		:color="color"
 		:opacity="opacity"
-		:visible="visible"
+		:visible="visible && capVisible"
 	/>
 	<SubSurfaceWall
 		:loop="loop"
@@ -20,11 +20,15 @@ import SubSurfaceCap from "./SubSurfaceCap.vue";
 import SubSurfaceWall from "./SubSurfaceWall.vue";
 import type { SubSurface } from "./types";
 
-defineProps<{
-	loop: SubSurface;
-	surfaceLevel: number;
-	color?: string;
-	opacity?: number;
-	visible?: boolean;
-}>();
+withDefaults(
+	defineProps<{
+		loop: SubSurface;
+		surfaceLevel: number;
+		color?: string;
+		opacity?: number;
+		visible?: boolean;
+		capVisible?: boolean;
+	}>(),
+	{ capVisible: true }
+);
 </script>
