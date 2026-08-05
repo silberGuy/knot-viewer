@@ -2,6 +2,8 @@ import type { Diagram, DiagramKnot, DiagramTriangle, DrawingData, Knot3D, Point3
 import { combineKnotPointsWithIntersections, computeIntersections } from "./drawing";
 import { findPointSurfaceIndex, getIntersectionsNotInKnotTriangles, getKnotIntersectionTriangles, getSurfaceLevels, getSurfaceLevelTriangles } from "./surfaces";
 
+const SURFACE_LEVEL_HEIGHT = 16;
+
 type NarrowDiagramKnot = Omit<DiagramKnot, 'surfaceTriangles'>;
 
 function getDiagramKnots(drawingData: DrawingData): NarrowDiagramKnot[] {
@@ -198,14 +200,19 @@ export function getSurfaceLevelsCount(diagram: Diagram): number {
     return minimizeSurfaceLevels(diagram.surfaceLevels).length;
 }
 
+export function getCoordsAtSurfaceLevel(x: number, y: number, surfaceLevel: number): [number, number, number] {
+    return [x, SURFACE_LEVEL_HEIGHT * surfaceLevel, y];
+}
+
 function get3DPoint(point: DiagramPoint, surfaceLevels: SurfaceLevel[]): Point3D {
     let surfaceIndex = findPointSurfaceIndex(surfaceLevels, point);
     if (surfaceIndex === -1)
         console.warn("could not find surface for point", point);
+
     return {
         id: point.id,
         diagramPoint: point,
-        coords: [point.x, 8 * surfaceIndex, point.y]
+        coords: getCoordsAtSurfaceLevel(point.x, point.y, surfaceIndex)
     };
 }
 
