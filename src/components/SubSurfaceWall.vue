@@ -5,6 +5,7 @@
 		:key="triangle.flat().join('_')"
 		:color="color"
 		:opacity="opacity"
+		lit
 	/>
 </template>
 

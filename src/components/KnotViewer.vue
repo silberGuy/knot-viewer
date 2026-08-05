@@ -7,7 +7,13 @@
 				:fov="50"
 				:near="0.1"
 				:far="1000"
-			/>
+			>
+				<!-- decay=0: default physically-correct falloff (decay=2) fades to ~0 at this
+				scene's scale (raw SVG pixel coordinates, often hundreds of units across), which
+				made the lit Subsurface surface look flat/unshaded again. -->
+				<TresPointLight :intensity="2" :decay="0" />
+			</TresPerspectiveCamera>
+			<TresAmbientLight :intensity="0.4" />
 			<OrbitControls :target="orbitTarget" />
 			<KnotViewerKnot
 				v-for="knot in knots3D"
