@@ -83,8 +83,10 @@ export type SubSurfacesKnot = Omit<Knot3D, 'points'> & {
 
 // The walked loop itself - not sourced from the drawing. Has no surfaceTriangles of its own -
 // see the Subsurface cap (SubSurfaceCap.vue) for the separate, flattened surface built from it.
-export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot' | 'surfaceTriangles'> & {
+export type SubsurfaceLoop = Omit<SubSurfacesKnot, 'diagramKnot' | 'surfaceTriangles'> & {
     id: string;
+    // True only if the walk's last step landed back on its own start point - see CONTEXT.md.
+    isClosed: boolean;
 }
 
 // A single triangle of the Subsurface surface (cap or wall), as three raw [x, y, z] tuples.

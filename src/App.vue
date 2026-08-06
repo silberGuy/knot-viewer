@@ -10,6 +10,7 @@
 				</button>
 				<button
 					:class="{ active: controlsStore.activeTab === 'subsurface' }"
+					:disabled="!hasEnoughPointsForSubsurface"
 					@click="controlsStore.activeTab = 'subsurface'"
 				>
 					Subsurface
@@ -61,6 +62,12 @@ const drawingData = computed<DrawingData>(() => ({
 	knots: knots.value,
 	interFlipIds: interFlipIds.value,
 }));
+
+// Fewer than 3 points total can't form a meaningful subsurface loop, so the
+// Subsurface tab stays disabled until there's enough to work with.
+const hasEnoughPointsForSubsurface = computed(
+	() => knots.value.reduce((count, knot) => count + knot.points.length, 0) >= 3,
+);
 
 const drawingDataForViewer = ref<DrawingData>(cloneDeep(drawingData.value));
 
@@ -121,5 +128,10 @@ function updateViewerData() {
 
 .board-tabs button.active {
 	background: #fff;
+}
+
+.board-tabs button:disabled {
+	cursor: not-allowed;
+	color: #999;
 }
 </style>

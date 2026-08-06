@@ -2,7 +2,7 @@
 
 Lets a user draw one or more knots as a 2D diagram with over/under crossings, then renders
 the corresponding 3D triangulated surface(s). See [AGENTS.md](./AGENTS.md) for the pipeline
-that turns a drawing into 3D geometry (`Knot` → `Diagram` → `Knot3D` → `SubSurface`).
+that turns a drawing into 3D geometry (`Knot` → `Diagram` → `Knot3D` → `SubsurfaceLoop`).
 
 ## Language
 
@@ -30,7 +30,7 @@ _Avoid_: view, panel (these are UI mechanics, not the domain concept — the con
 board is showing and what it's for*)
 
 **Subsurface walk**:
-The graph-walk that produces a `SubSurface` (see [AGENTS.md](./AGENTS.md)) — starting at a
+The graph-walk that produces a `SubsurfaceLoop` (see [AGENTS.md](./AGENTS.md)) — starting at a
 point and, at each **crossing point**, resolving that crossing's **crossing walk direction** to
 decide whether to continue straight or jump to the crossing's twin point. Because the resulting
 loop is closed, the walk's own starting point isn't meaningful on its own by default — any
@@ -84,10 +84,14 @@ exactly retrace the arrival, so the arrow never offers it. Doesn't exist for a c
 current loop never reaches — there's nothing to have arrived from, so nothing is excluded.
 
 **Subsurface loop**:
-The `SubSurface` a subsurface walk produces — an ordered sequence of points that alternates
+The `SubsurfaceLoop` a subsurface walk produces — an ordered sequence of points that alternates
 between points inherited from a knot's diagram and **crossing points**. Shown in the Viewer
 (3D) and, as an overlay on top of the knots' own lines, in the Subsurface board (2D) — the same
-loop, projected.
+loop, projected. Carries its own `isClosed`: true only when the walk's last step lands back on
+its own start point: false either if the walk runs out of data (an open, undrawn-shut knot) or
+if it closes into a smaller loop that doesn't reach back to the start. The Subsurface board
+surfaces `isClosed === false` to the user directly, since an unclosed loop can't produce a valid
+Subsurface surface.
 _Avoid_: subsurface, loop (on their own, ambiguous with the walk or with a knot's own polyline)
 
 **Crossing point**:

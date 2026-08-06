@@ -12,11 +12,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { Coords2D, SubSurface } from "./types";
+import type { Coords2D, SubsurfaceLoop } from "./types";
 import { getSubSurfaceWallTriangles } from "../utils/sub-surfaces";
 
 const props = defineProps<{
-	loop: SubSurface;
+	loop: SubsurfaceLoop;
 	surfaceLevel: number;
 	color?: string;
 	opacity?: number;

@@ -21,12 +21,12 @@
 import { computed } from "vue";
 import SubSurfaceCap from "./SubSurfaceCap.vue";
 import SubSurfaceWall from "./SubSurfaceWall.vue";
-import type { SubSurface } from "./types";
+import type { SubsurfaceLoop } from "./types";
 import { getShiftedCapBoundary } from "../utils/sub-surfaces";
 
 const props = withDefaults(
 	defineProps<{
-		loop: SubSurface;
+		loop: SubsurfaceLoop;
 		surfaceLevel: number;
 		color?: string;
 		opacity?: number;

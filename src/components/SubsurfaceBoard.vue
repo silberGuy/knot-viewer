@@ -1,58 +1,66 @@
 <template>
 	<div class="drawing-board">
-		<svg>
-			<line
-				v-for="segment in loopSegments"
-				:key="segment.id"
-				class="subsurface-loop-line"
-				:x1="segment.from.x"
-				:y1="segment.from.y"
-				:x2="segment.to.x"
-				:y2="segment.to.y"
-			/>
-			<KnotShape
-				v-for="knot in knots"
-				:key="knot.id"
-				:id="knot.id"
-				:points="knot.points"
-				:isClosed="knot.isClosed"
-				:color="knot.color"
-			>
-				<template #point="{ point }">
-					<circle
-						class="normal-point"
-						:cx="point.x"
-						:cy="point.y"
-						r="6"
-						:fill="knot.color || 'black'"
-						@click.stop="subsurfaceWalkStore.setStartPoint(point.id)"
-					/>
-				</template>
-			</KnotShape>
-			<KnotIntersections
-				:knots="knots"
-				:interFlipIds="interFlipIds"
-				:clickable="false"
-			/>
-			<CrossingWalkArrow
-				v-for="arrow in crossingWalkArrows"
-				:key="arrow.crossingId"
-				:arrow="arrow"
-				:walk-points="subSurfaceLoop.points"
-				:knots="knotsWithSubSurfacePoints"
-				@select="
-					(direction) =>
-						subsurfaceWalkStore.setDirection(arrow.crossingId, direction)
-				"
-			/>
-			<circle
-				v-if="projectedLoopPoints.length > 0"
-				class="subsurface-loop-start-marker"
-				:cx="projectedLoopPoints[0].x"
-				:cy="projectedLoopPoints[0].y"
-				r="10"
-			/>
-		</svg>
+		<p v-if="!hasEnoughPointsForSubsurface" class="board-empty-message">
+			No knots are given
+		</p>
+		<template v-else>
+			<svg>
+				<line
+					v-for="segment in loopSegments"
+					:key="segment.id"
+					class="subsurface-loop-line"
+					:x1="segment.from.x"
+					:y1="segment.from.y"
+					:x2="segment.to.x"
+					:y2="segment.to.y"
+				/>
+				<KnotShape
+					v-for="knot in knots"
+					:key="knot.id"
+					:id="knot.id"
+					:points="knot.points"
+					:isClosed="knot.isClosed"
+					:color="knot.color"
+				>
+					<template #point="{ point }">
+						<circle
+							class="normal-point"
+							:cx="point.x"
+							:cy="point.y"
+							r="6"
+							:fill="knot.color || 'black'"
+							@click.stop="subsurfaceWalkStore.setStartPoint(point.id)"
+						/>
+					</template>
+				</KnotShape>
+				<KnotIntersections
+					:knots="knots"
+					:interFlipIds="interFlipIds"
+					:clickable="false"
+				/>
+				<CrossingWalkArrow
+					v-for="arrow in crossingWalkArrows"
+					:key="arrow.crossingId"
+					:arrow="arrow"
+					:walk-points="subSurfaceLoop.points"
+					:knots="knotsWithSubSurfacePoints"
+					@select="
+						(direction) =>
+							subsurfaceWalkStore.setDirection(arrow.crossingId, direction)
+					"
+				/>
+				<circle
+					v-if="projectedLoopPoints.length > 0"
+					class="subsurface-loop-start-marker"
+					:cx="projectedLoopPoints[0].x"
+					:cy="projectedLoopPoints[0].y"
+					r="10"
+				/>
+			</svg>
+			<p v-if="isLoopUnclosed" class="loop-unclosed-message">
+				Subsurface loop is not closed
+			</p>
+		</template>
 	</div>
 </template>
 
@@ -78,9 +86,17 @@ const props = defineProps<{
 
 const subsurfaceWalkStore = useSubsurfaceWalkStore();
 
+// Matches the App.vue tab-disable threshold - fewer than 3 points can't form
+// a meaningful subsurface loop.
+const hasEnoughPointsForSubsurface = computed(
+	() => props.knots.reduce((count, knot) => count + knot.points.length, 0) >= 3,
+);
+
 // Same (uncentered) coordinate space this board already renders in, so the
-// projected loop lines up with the knots' own lines drawn above.
+// projected loop lines up with the knots' own lines drawn above. Guarded:
+// getDiagram/get3DKnots assume enough points to work out surface levels from.
 const knots3D = computed(() => {
+	if (!hasEnoughPointsForSubsurface.value) return [];
 	const drawingData: DrawingData = {
 		knots: props.knots,
 		interFlipIds: props.interFlipIds,
@@ -103,6 +119,11 @@ const subSurfaceLoop = computed(() =>
 		subsurfaceWalkStore.crossingWalkDirections,
 		subsurfaceWalkStore.selectedStartPointId,
 	),
+);
+
+const isLoopUnclosed = computed(
+	() =>
+		subSurfaceLoop.value.points.length > 0 && !subSurfaceLoop.value.isClosed,
 );
 
 // Each knot's own point list (including injected crossing points), so
@@ -189,6 +210,27 @@ svg {
 	fill: none;
 	stroke: #00aaff;
 	stroke-width: 3;
+	pointer-events: none;
+}
+
+.board-empty-message {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: #888;
+}
+
+.loop-unclosed-message {
+	position: absolute;
+	bottom: 2em;
+	left: 50%;
+	transform: translateX(-50%);
+	margin: 0;
+	font-size: 0.85em;
+	background: #b42309;
+	padding: 0.5em 1em;
+	border-radius: 4px;
 	pointer-events: none;
 }
 </style>

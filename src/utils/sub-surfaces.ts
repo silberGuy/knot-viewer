@@ -1,6 +1,6 @@
 import { Ray, Vector3 } from "three";
 import { Earcut } from "three/src/extras/Earcut.js";
-import type { Coords2D, CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubSurface, SubSurfaceTriangle, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { Coords2D, CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubsurfaceLoop, SubSurfaceTriangle, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
 import { isClosingPoint } from "./drawing";
 
 function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
@@ -301,25 +301,29 @@ function advance(
     return { knot: twinKnot, pointIndex: twinPointIndex, step, justArrivedViaJump: true };
 }
 
-// Walks from `start` until it revisits a point (loop closes) or the data runs out.
+// Walks from `start` until it revisits a point or the data runs out. isClosed is true only if
+// the point it revisits is its own start point - not just any already-visited point (see
+// CONTEXT.md's "Subsurface loop").
 function runWalk(
     start: WalkState,
     knotsWithSubSurfacePoints: SubSurfacesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
-): SubSurfacesPoint[] {
+): { points: SubSurfacesPoint[]; isClosed: boolean } {
     const points: SubSurfacesPoint[] = [];
     const visitedIds = new Set<string>();
 
     let state: WalkState | undefined = start;
     while (state) {
         const point = currentPoint(state);
-        if (!point || visitedIds.has(point.id)) break;
+        if (!point || visitedIds.has(point.id)) {
+            return { points, isClosed: point?.id === points[0]?.id };
+        }
         points.push(point);
         visitedIds.add(point.id);
         state = advance(state, knotsWithSubSurfacePoints, crossingWalkDirections);
     }
 
-    return points;
+    return { points, isClosed: false };
 }
 
 // Starting point is never user-facing (a closed loop has no beginning) *unless* the user
@@ -371,17 +375,18 @@ export function getSubSurfaceIntersectionsLoop(
     knots: Knot3D[],
     crossingWalkDirections: CrossingWalkDirections = new Map(),
     selectedStartPointId?: string,
-): SubSurface {
+): SubsurfaceLoop {
     if (knots.length === 0) {
-        return { id: 'sub-surface-empty', points: [] };
+        return { id: 'sub-surface-empty', points: [], isClosed: true };
     }
 
     const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
     const start = getWalkStart(knotsWithSubSurfacePoints, crossingWalkDirections, selectedStartPointId);
-    const walkedPoints = runWalk(start, knotsWithSubSurfacePoints, crossingWalkDirections);
+    const { points: walkedPoints, isClosed } = runWalk(start, knotsWithSubSurfacePoints, crossingWalkDirections);
 
     return {
         id: `sub-surface-${knots.map(k => k.diagramKnot.id).join('_')}`,
+        isClosed,
         // Nudged slightly off of the knots' own lines so the overlay doesn't sit exactly
         // on top of them.
         points: walkedPoints.map(point => ({
@@ -588,7 +593,7 @@ function shiftCapPoint(prev: Coords2D, curr: Coords2D, next: Coords2D, distance:
 // A knot's own closing point (drawing.ts's isClosingPoint) always duplicates that knot's first
 // point in this walk, coincident with it - not a genuine extra corner - so cap/wall geometry
 // drops it rather than treating it as a second corner right on top of the first.
-function getCapLoopPoints(loop: SubSurface): SubSurfacesPoint[] {
+function getCapLoopPoints(loop: SubsurfaceLoop): SubSurfacesPoint[] {
     return loop.points.filter((point) => !isClosingPoint(point));
 }
 
@@ -597,7 +602,7 @@ function getCapLoopPoints(loop: SubSurface): SubSurfacesPoint[] {
 // their own points' shifted position - each point using its own real (raw loop) neighbors. Any
 // self-touching this produces or resolves is handled separately, by getSubSurfaceCapTriangles
 // alone (ADR 0007) - shifting itself doesn't need to know about it.
-export function getShiftedCapBoundary(loop: SubSurface, distance: number): Map<string, Coords2D> {
+export function getShiftedCapBoundary(loop: SubsurfaceLoop, distance: number): Map<string, Coords2D> {
     const points = getCapLoopPoints(loop);
     const flattened = points.map(projectSubSurfacesPoint);
     const shifted = new Map<string, Coords2D>();
@@ -619,7 +624,7 @@ export function getShiftedCapBoundary(loop: SubSurface, distance: number): Map<s
 // surface level (8 * surfaceLevel, matching get3DPoint in diagram.ts). surfaceLevel should be one
 // past the highest level any knot currently occupies (see getSurfaceLevelsCount in diagram.ts) so
 // the cap always sits above every knot.
-export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
+export function getSubSurfaceCapTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
     const boundary = getCapLoopPoints(loop).map((point) => shiftedBoundary.get(point.id)!);
     return splitSelfIntersectingBoundary(boundary).flatMap((subBoundary) => {
@@ -646,7 +651,7 @@ export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number
 // that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
 // of points and has no such requirement. Top edge uses the same shiftedBoundary as the cap;
 // bottom edge (real coords) is never shifted.
-export function getSubSurfaceWallTriangles(loop: SubSurface, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
+export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
     const points = getCapLoopPoints(loop);
     if (points.length < 3) return [];
