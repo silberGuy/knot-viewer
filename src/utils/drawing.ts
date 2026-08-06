@@ -10,7 +10,8 @@ function isStartingPoint(point: Point) {
     return point.id.endsWith('-0');
 }
 
-export function isClosingPoint(point: Point) {
+// Takes just `{ id }`, not the full Point, so non-2D points (e.g. SubSurfacesPoint) can use it too.
+export function isClosingPoint(point: { id: string }) {
     return point.id.endsWith(CLOSING_POINT_ID);
 }
 

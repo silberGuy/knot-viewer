@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { SubSurface } from "./types";
+import type { Coords2D, SubSurface } from "./types";
 import { getSubSurfaceCapTriangles } from "../utils/sub-surfaces";
 
 const props = defineProps<{
@@ -21,6 +21,7 @@ const props = defineProps<{
 	color?: string;
 	opacity?: number;
 	visible?: boolean;
+	shiftedBoundary: Map<string, Coords2D>;
 }>();
 
 // Stays mounted regardless of `visible` and just renders zero triangles when off, rather than
@@ -30,6 +31,6 @@ const props = defineProps<{
 const triangles = computed(() =>
 	props.visible === false
 		? []
-		: getSubSurfaceCapTriangles(props.loop, props.surfaceLevel)
+		: getSubSurfaceCapTriangles(props.loop, props.surfaceLevel, props.shiftedBoundary)
 );
 </script>

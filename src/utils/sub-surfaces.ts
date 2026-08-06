@@ -1,6 +1,7 @@
 import { Ray, Vector3 } from "three";
 import { Earcut } from "three/src/extras/Earcut.js";
-import type { CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubSurface, SubSurfaceTriangle, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { Coords2D, CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubSurface, SubSurfaceTriangle, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import { isClosingPoint } from "./drawing";
 
 function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
     const v = new Vector3(...a.coords);
@@ -541,16 +542,81 @@ function splitLoopAtDuplicateIntersections(points: SubSurfacesPoint[]): SubSurfa
     ];
 }
 
+// Right-hand normal of `from -> to`, in this plane's own coordinates (see projectSubSurfacesPoint).
+function getRightNormal(from: Coords2D, to: Coords2D): Coords2D {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    return length === 0 ? { x: 0, y: 0 } : { x: -dy / length, y: dx / length };
+}
+
+function translateBy(point: Coords2D, normal: Coords2D, distance: number): Coords2D {
+    return { x: point.x + normal.x * distance, y: point.y + normal.y * distance };
+}
+
+// Unlike drawing.ts's getIntersection, unbounded - cap shift's miter corners routinely fall
+// outside either original segment. Null for parallel lines.
+function intersectInfiniteLines(a1: Coords2D, a2: Coords2D, b1: Coords2D, b2: Coords2D): Coords2D | null {
+    const denominator = (a1.x - a2.x) * (b1.y - b2.y) - (a1.y - a2.y) * (b1.x - b2.x);
+    if (denominator === 0) return null;
+    const ua = ((a1.x - b1.x) * (b1.y - b2.y) - (a1.y - b1.y) * (b1.x - b2.x)) / denominator;
+    return { x: a1.x + ua * (a2.x - a1.x), y: a1.y + ua * (a2.y - a1.y) };
+}
+
+// Cap shift (CONTEXT.md, ADR 0007): moves `curr` to where its two adjacent lines, each shifted
+// `distance` along its own right normal, now cross. Falls back to a plain translation when the
+// two lines are parallel (e.g. collinear neighbors) and so never cross.
+function shiftCapPoint(prev: Coords2D, curr: Coords2D, next: Coords2D, distance: number): Coords2D {
+    const normalIn = getRightNormal(prev, curr);
+    const normalOut = getRightNormal(curr, next);
+    const cross = normalIn.x * normalOut.y - normalIn.y * normalOut.x;
+    if (Math.abs(cross) < 1e-6) return translateBy(curr, normalIn, distance);
+
+    const inA = translateBy(prev, normalIn, distance);
+    const inB = translateBy(curr, normalIn, distance);
+    const outA = translateBy(curr, normalOut, distance);
+    const outB = translateBy(next, normalOut, distance);
+    return intersectInfiniteLines(inA, inB, outA, outB)!;
+}
+
+// A knot's own closing point (drawing.ts's isClosingPoint) always duplicates that knot's first
+// point in this walk, coincident with it - not a genuine extra corner - so cap/wall geometry
+// drops it rather than treating it as a second corner right on top of the first.
+function getCapLoopPoints(loop: SubSurface): SubSurfacesPoint[] {
+    return loop.points.filter((point) => !isClosingPoint(point));
+}
+
+// The cap's boundary shifted by `distance` (CONTEXT.md's "Cap shift"), keyed by point id so both
+// getSubSurfaceCapTriangles (post-split) and getSubSurfaceWallTriangles (raw loop) can look up
+// their own points' shifted position - computed once, up front, per ADR 0007. Callers (currently
+// SubSurfaceSurface.vue) compute this once and pass it to both, rather than each recomputing it.
+export function getShiftedCapBoundary(loop: SubSurface, distance: number): Map<string, Coords2D> {
+    const points = getCapLoopPoints(loop);
+    const flattened = points.map(projectSubSurfacesPoint);
+    const shifted = new Map<string, Coords2D>();
+    for (let i = 0; i < points.length; i++) {
+        if (points.length < 3) {
+            shifted.set(points[i].id, flattened[i]);
+            continue;
+        }
+        const prev = flattened[(i - 1 + points.length) % points.length];
+        const next = flattened[(i + 1) % points.length];
+        shifted.set(points[i].id, shiftCapPoint(prev, flattened[i], next, distance));
+    }
+    return shifted;
+}
+
 // Splits the loop wherever its flattened footprint would otherwise self-touch (see
 // splitLoopAtDuplicateIntersections), then triangulates each resulting simple sub-loop separately
 // and lifts every point to the same shared height for the given surface level (8 * surfaceLevel,
 // matching get3DPoint in diagram.ts). surfaceLevel should be one past the highest level any knot
 // currently occupies (see getSurfaceLevelsCount in diagram.ts) so the cap always sits above every
-// knot.
-export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number): SubSurfaceTriangle[] {
+// knot. shiftedBoundary is the loop's boundary per getShiftedCapBoundary (unshifted if the caller
+// passes capShiftDistance 0).
+export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
-    return splitLoopAtDuplicateIntersections(loop.points).flatMap((subLoopPoints) => {
-        const flattened = subLoopPoints.map(projectSubSurfacesPoint);
+    return splitLoopAtDuplicateIntersections(getCapLoopPoints(loop)).flatMap((subLoopPoints) => {
+        const flattened = subLoopPoints.map((point) => shiftedBoundary.get(point.id)!);
         if (flattened.length < 3) return [];
 
         const cut = Earcut.triangulate(flattened.flatMap((p) => [p.x, p.y]), [], 2);
@@ -572,17 +638,18 @@ export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number
 // rectangle spans from their flattened, shared-height cap positions down to their real coords.
 // Deliberately walks the raw loop, not splitLoopAtDuplicateIntersections's simple sub-loops -
 // that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
-// of points and has no such requirement (see ADR 0005).
-export function getSubSurfaceWallTriangles(loop: SubSurface, surfaceLevel: number): SubSurfaceTriangle[] {
+// of points and has no such requirement (see ADR 0005). Top edge uses the same shiftedBoundary as
+// the cap (ADR 0007); bottom edge (real coords) is never shifted.
+export function getSubSurfaceWallTriangles(loop: SubSurface, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
-    const { points } = loop;
+    const points = getCapLoopPoints(loop);
     if (points.length < 3) return [];
 
     const triangles: SubSurfaceTriangle[] = [];
     for (let i = 0; i < points.length; i++) {
         const next = (i + 1) % points.length;
-        const capA = projectSubSurfacesPoint(points[i]);
-        const capB = projectSubSurfacesPoint(points[next]);
+        const capA = shiftedBoundary.get(points[i].id)!;
+        const capB = shiftedBoundary.get(points[next].id)!;
         const a: [number, number, number] = [capA.x, height, capA.y];
         const b: [number, number, number] = [capB.x, height, capB.y];
         const loopA = points[i].coords;

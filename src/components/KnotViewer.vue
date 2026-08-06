@@ -36,6 +36,7 @@
 				:visible="controlsStore.showSubSurfaceSurface"
 				:capVisible="controlsStore.showSubSurfaceCap"
 				:opacity="controlsStore.subSurfaceOpacity"
+				:capShiftDistance="controlsStore.capShiftDistance"
 				color="#ff00ff"
 			/>
 			<ViewerLine

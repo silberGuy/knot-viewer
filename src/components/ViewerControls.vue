@@ -47,6 +47,18 @@
 				v-model.number="controlsStore.subSurfaceOpacity"
 			/>
 		</label>
+
+		<label v-if="controlsStore.isSubSurfaceActive">
+			Cap Shift
+			<input
+				type="range"
+				id="cap-shift-distance"
+				min="-30"
+				max="30"
+				step="1"
+				v-model.number="controlsStore.capShiftDistance"
+			/>
+		</label>
 	</div>
 </template>
 

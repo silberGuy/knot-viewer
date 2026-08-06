@@ -8,6 +8,7 @@ export const useControlsStore = defineStore('showSurfaces', () => {
     const [showSubSurfaceSurface, toggleShowSubSurfaceSurface] = useToggle(true);
     const [showSubSurfaceCap, toggleShowSubSurfaceCap] = useToggle(true);
     const subSurfaceOpacity = ref(0.6);
+    const capShiftDistance = ref(0);
 
     const activeTab = ref<"drawing" | "subsurface">("drawing");
     const isSubSurfaceActive = computed(() => activeTab.value === "subsurface");
@@ -22,6 +23,7 @@ export const useControlsStore = defineStore('showSurfaces', () => {
         showSubSurfaceCap,
         toggleShowSubSurfaceCap,
         subSurfaceOpacity,
+        capShiftDistance,
         activeTab,
         isSubSurfaceActive,
     }

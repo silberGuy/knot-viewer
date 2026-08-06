@@ -5,6 +5,7 @@
 		:color="color"
 		:opacity="opacity"
 		:visible="visible && capVisible"
+		:shiftedBoundary="shiftedBoundary"
 	/>
 	<SubSurfaceWall
 		:loop="loop"
@@ -12,15 +13,18 @@
 		:color="color"
 		:opacity="opacity"
 		:visible="visible"
+		:shiftedBoundary="shiftedBoundary"
 	/>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import SubSurfaceCap from "./SubSurfaceCap.vue";
 import SubSurfaceWall from "./SubSurfaceWall.vue";
 import type { SubSurface } from "./types";
+import { getShiftedCapBoundary } from "../utils/sub-surfaces";
 
-withDefaults(
+const props = withDefaults(
 	defineProps<{
 		loop: SubSurface;
 		surfaceLevel: number;
@@ -28,7 +32,12 @@ withDefaults(
 		opacity?: number;
 		visible?: boolean;
 		capVisible?: boolean;
+		capShiftDistance?: number;
 	}>(),
 	{ capVisible: true }
 );
+
+// Computed once here, shared by both the cap and the wall's top edge (ADR 0007), rather than each
+// recomputing it from capShiftDistance independently.
+const shiftedBoundary = computed(() => getShiftedCapBoundary(props.loop, props.capShiftDistance ?? 0));
 </script>

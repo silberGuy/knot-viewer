@@ -132,3 +132,13 @@ self-touches — that split exists only so Earcut gets a simple polygon to trian
 a wall rectangle, being local to one pair of points, has no such requirement (see ADR 0005).
 Rendered by its own component (`SubSurfaceWall.vue`), used by `SubSurfaceSurface.vue`.
 _Avoid_: wall surface (ambiguous with the cap or a knot's own surface)
+
+**Cap shift**:
+A live offset (`capShiftDistance`) on the **Subsurface cap**'s boundary, coupled to the
+**Subsurface wall**'s top edge — the wall's bottom edge and the knots' own points are untouched.
+For each loop point, its two adjacent lines are each shifted `capShiftDistance` along their own
+right-hand normal (negative shifts the other way) and re-intersected as infinite lines to give
+the point its new position; parallel adjacent lines fall back to a plain translation. Computed on
+the loop's raw point order, before the cap's self-touching split (ADR 0007).
+_Avoid_: cap offset, cap inset/outset (implies a uniformly inward/outward move, which a concave
+cap under shift doesn't guarantee)
