@@ -138,7 +138,8 @@ A live offset (`capShiftDistance`) on the **Subsurface cap**'s boundary, coupled
 **Subsurface wall**'s top edge — the wall's bottom edge and the knots' own points are untouched.
 For each loop point, its two adjacent lines are each shifted `capShiftDistance` along their own
 right-hand normal (negative shifts the other way) and re-intersected as infinite lines to give
-the point its new position; parallel adjacent lines fall back to a plain translation. Computed on
-the loop's raw point order, before the cap's self-touching split (ADR 0007).
+the point its new position; parallel adjacent lines fall back to a plain translation. For
+rendering, the cap then splits wherever its own shifted boundary self-intersects, inserting a
+fresh point there (ADR 0007) - the wall never sees these inserted points.
 _Avoid_: cap offset, cap inset/outset (implies a uniformly inward/outward move, which a concave
 cap under shift doesn't guarantee)

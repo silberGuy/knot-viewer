@@ -504,41 +504,47 @@ export function getSurfaceIntersectionsPairs(intersections: SubSurfacesPoint[]):
 }
 
 
-// A drawn 2D Intersection (drawing.ts) produces two DiagramPoints at the same 2D location, one
-// per knot involved, linked via intersectionParallelId. The subsurface walk only jumps between
-// knots at its own crossing points (surfaceIntersection - where the surfaces actually pierce);
-// if the two knots at a drawn intersection don't pierce there, the walk can visit both knots'
-// copies as separate ordinary points, which flatten to the exact same (x, y). Finds the first
-// such pair still in `points`, if any.
-function findDuplicateIntersectionPair(points: SubSurfacesPoint[]): [number, number] | undefined {
-    for (let i = 0; i < points.length; i++) {
-        const parallelId = points[i].diagramPoint?.intersectionParallelId;
-        if (!parallelId) continue;
-        const j = points.findIndex((p, index) => index !== i && p.diagramPoint?.id === parallelId);
-        if (j !== -1) return i < j ? [i, j] : [j, i];
+// Segment (not infinite-line) intersection, inclusive of the two segments merely touching at an
+// endpoint - a cap boundary counts as self-intersecting either way (CONTEXT.md's "Cap shift"): two
+// loop points sharing a coordinate is as much a self-intersection as two shifted lines truly
+// crossing through each other. Null for parallel lines or a crossing outside either segment.
+function segmentIntersection(a1: Coords2D, a2: Coords2D, b1: Coords2D, b2: Coords2D): Coords2D | null {
+    const denominator = (a1.x - a2.x) * (b1.y - b2.y) - (a1.y - a2.y) * (b1.x - b2.x);
+    if (denominator === 0) return null;
+    const ua = ((a1.x - b1.x) * (b1.y - b2.y) - (a1.y - b1.y) * (b1.x - b2.x)) / denominator;
+    const ub = ((a1.x - b1.x) * (a1.y - a2.y) - (a1.y - b1.y) * (a1.x - a2.x)) / denominator;
+    const epsilon = 1e-9;
+    if (ua < -epsilon || ua > 1 + epsilon || ub < -epsilon || ub > 1 + epsilon) return null;
+    return { x: a1.x + ua * (a2.x - a1.x), y: a1.y + ua * (a2.y - a1.y) };
+}
+
+// The first pair of non-adjacent edges in `boundary` (a closed, ordered ring) that intersect, if
+// any - adjacent edges share a real vertex by construction, not a self-intersection.
+function findBoundarySelfIntersection(boundary: Coords2D[]): { edgeA: number; edgeB: number; point: Coords2D } | undefined {
+    const n = boundary.length;
+    for (let edgeA = 0; edgeA < n; edgeA++) {
+        for (let edgeB = edgeA + 1; edgeB < n; edgeB++) {
+            if (edgeB === edgeA + 1 || (edgeA === 0 && edgeB === n - 1)) continue;
+            const point = segmentIntersection(boundary[edgeA], boundary[(edgeA + 1) % n], boundary[edgeB], boundary[(edgeB + 1) % n]);
+            if (point) return { edgeA, edgeB, point };
+        }
     }
     return undefined;
 }
 
-// Splits the loop into simple sub-loops wherever it contains both halves of a drawn Intersection
-// (see findDuplicateIntersectionPair) - the only known source of the flattened footprint
-// self-touching (confirmed against the domain model, not a general polygon-self-intersection
-// solver). Since both halves share one flattened coordinate, no new points are inserted: the loop
-// just splits into the two arcs between them, each closed back through its own copy of that shared
-// coordinate. Each arc keeps only *one* of the two duplicate points - not both - since they sit at
-// the same flattened position and an arc closes through it either way; keeping both in both arcs
-// would make each recursive call immediately re-find the very same pair at its own boundary and
-// re-split into an identical arc, never terminating. Recurses to handle more than one such pair.
-function splitLoopAtDuplicateIntersections(points: SubSurfacesPoint[]): SubSurfacesPoint[][] {
-    const pair = findDuplicateIntersectionPair(points);
-    if (!pair) return [points];
+// Splits `boundary` wherever it self-intersects (see findBoundarySelfIntersection), inserting the
+// found point to close each resulting simple sub-boundary - cap rendering only (ADR 0007); the
+// wall is never aware of these inserted points. Recurses for more than one self-intersection.
+function splitSelfIntersectingBoundary(boundary: Coords2D[]): Coords2D[][] {
+    const hit = findBoundarySelfIntersection(boundary);
+    if (!hit) return [boundary];
 
-    const [i, j] = pair;
-    const arcA = points.slice(i, j);
-    const arcB = [...points.slice(j), ...points.slice(0, i)];
+    const { edgeA, edgeB, point } = hit;
+    const arcA = [point, ...boundary.slice(edgeA + 1, edgeB + 1)];
+    const arcB = [point, ...boundary.slice(edgeB + 1), ...boundary.slice(0, edgeA + 1)];
     return [
-        ...splitLoopAtDuplicateIntersections(arcA),
-        ...splitLoopAtDuplicateIntersections(arcB),
+        ...splitSelfIntersectingBoundary(arcA),
+        ...splitSelfIntersectingBoundary(arcB),
     ];
 }
 
@@ -587,9 +593,10 @@ function getCapLoopPoints(loop: SubSurface): SubSurfacesPoint[] {
 }
 
 // The cap's boundary shifted by `distance` (CONTEXT.md's "Cap shift"), keyed by point id so both
-// getSubSurfaceCapTriangles (post-split) and getSubSurfaceWallTriangles (raw loop) can look up
-// their own points' shifted position - computed once, up front, per ADR 0007. Callers (currently
-// SubSurfaceSurface.vue) compute this once and pass it to both, rather than each recomputing it.
+// getSubSurfaceCapTriangles and getSubSurfaceWallTriangles (both walking the raw loop) can look up
+// their own points' shifted position - each point using its own real (raw loop) neighbors. Any
+// self-touching this produces or resolves is handled separately, by getSubSurfaceCapTriangles
+// alone (ADR 0007) - shifting itself doesn't need to know about it.
 export function getShiftedCapBoundary(loop: SubSurface, distance: number): Map<string, Coords2D> {
     const points = getCapLoopPoints(loop);
     const flattened = points.map(projectSubSurfacesPoint);
@@ -606,27 +613,26 @@ export function getShiftedCapBoundary(loop: SubSurface, distance: number): Map<s
     return shifted;
 }
 
-// Splits the loop wherever its flattened footprint would otherwise self-touch (see
-// splitLoopAtDuplicateIntersections), then triangulates each resulting simple sub-loop separately
-// and lifts every point to the same shared height for the given surface level (8 * surfaceLevel,
-// matching get3DPoint in diagram.ts). surfaceLevel should be one past the highest level any knot
-// currently occupies (see getSurfaceLevelsCount in diagram.ts) so the cap always sits above every
-// knot. shiftedBoundary is the loop's boundary per getShiftedCapBoundary (unshifted if the caller
-// passes capShiftDistance 0).
+// Triangulates the cap: looks up each loop point's shifted position, splits wherever the
+// *shifted* boundary self-intersects (splitSelfIntersectingBoundary - ADR 0007), then triangulates
+// each resulting simple sub-boundary and lifts every point to one shared height for the given
+// surface level (8 * surfaceLevel, matching get3DPoint in diagram.ts). surfaceLevel should be one
+// past the highest level any knot currently occupies (see getSurfaceLevelsCount in diagram.ts) so
+// the cap always sits above every knot.
 export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
-    return splitLoopAtDuplicateIntersections(getCapLoopPoints(loop)).flatMap((subLoopPoints) => {
-        const flattened = subLoopPoints.map((point) => shiftedBoundary.get(point.id)!);
-        if (flattened.length < 3) return [];
+    const boundary = getCapLoopPoints(loop).map((point) => shiftedBoundary.get(point.id)!);
+    return splitSelfIntersectingBoundary(boundary).flatMap((subBoundary) => {
+        if (subBoundary.length < 3) return [];
 
-        const cut = Earcut.triangulate(flattened.flatMap((p) => [p.x, p.y]), [], 2);
+        const cut = Earcut.triangulate(subBoundary.flatMap((p) => [p.x, p.y]), [], 2);
         const triangles: SubSurfaceTriangle[] = [];
         for (let i = 0; i < cut.length; i += 3) {
             const [a, b, c] = cut.slice(i, i + 3);
             triangles.push([
-                [flattened[a].x, height, flattened[a].y],
-                [flattened[b].x, height, flattened[b].y],
-                [flattened[c].x, height, flattened[c].y],
+                [subBoundary[a].x, height, subBoundary[a].y],
+                [subBoundary[b].x, height, subBoundary[b].y],
+                [subBoundary[c].x, height, subBoundary[c].y],
             ]);
         }
         return triangles;
@@ -636,10 +642,10 @@ export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number
 // Builds the walls connecting the cap down to the loop's own real-height points: for every pair
 // of adjacent loop points (wrapping last back to first, since the walk is a closed ring), a
 // rectangle spans from their flattened, shared-height cap positions down to their real coords.
-// Deliberately walks the raw loop, not splitLoopAtDuplicateIntersections's simple sub-loops -
+// Deliberately walks the raw loop, not the cap's own self-intersection split (ADR 0005/0007) -
 // that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
-// of points and has no such requirement (see ADR 0005). Top edge uses the same shiftedBoundary as
-// the cap (ADR 0007); bottom edge (real coords) is never shifted.
+// of points and has no such requirement. Top edge uses the same shiftedBoundary as the cap;
+// bottom edge (real coords) is never shifted.
 export function getSubSurfaceWallTriangles(loop: SubSurface, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
     const height = 8 * surfaceLevel;
     const points = getCapLoopPoints(loop);
