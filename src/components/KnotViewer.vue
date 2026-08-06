@@ -6,7 +6,7 @@
 				:position="cameraPosition"
 				:fov="50"
 				:near="0.1"
-				:far="1000"
+				:far="100000"
 			>
 				<!-- decay=0: default physically-correct falloff (decay=2) fades to ~0 at this
 				scene's scale (raw SVG pixel coordinates, often hundreds of units across), which
