@@ -56,16 +56,31 @@
 				min="-30"
 				max="30"
 				step="1"
-				v-model.number="controlsStore.capShiftDistance"
+				list="cap-shift-distance-zero"
+				v-model.number="capShiftDistance"
 			/>
+			<datalist id="cap-shift-distance-zero">
+				<option value="0" />
+			</datalist>
 		</label>
 	</div>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { useControlsStore } from "../data/controls";
 
 const controlsStore = useControlsStore();
+
+// A plain step doesn't make 0 any easier to land on than any other value - this widens the
+// "snap zone" around 0 specifically, since it's the shift's own no-op/reset value.
+const ZERO_SNAP_RANGE = 2;
+const capShiftDistance = computed({
+	get: () => controlsStore.capShiftDistance,
+	set: (value: number) => {
+		controlsStore.capShiftDistance = Math.abs(value) <= ZERO_SNAP_RANGE ? 0 : value;
+	},
+});
 </script>
 
 <style scoped>

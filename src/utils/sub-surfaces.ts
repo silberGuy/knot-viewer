@@ -547,7 +547,7 @@ function getRightNormal(from: Coords2D, to: Coords2D): Coords2D {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const length = Math.hypot(dx, dy);
-    return length === 0 ? { x: 0, y: 0 } : { x: -dy / length, y: dx / length };
+    return length === 0 ? { x: 0, y: 0 } : { x: dy / length, y: -dx / length };
 }
 
 function translateBy(point: Coords2D, normal: Coords2D, distance: number): Coords2D {
