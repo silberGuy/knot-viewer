@@ -631,11 +631,11 @@ export function getShiftedCapBoundary(loop: SubsurfaceLoop, distance: number): M
 // Triangulates the cap: looks up each loop point's shifted position, splits wherever the
 // *shifted* boundary self-intersects (splitSelfIntersectingBoundary - ADR 0007), then triangulates
 // each resulting simple sub-boundary and lifts every point to one shared height for the given
-// surface level (8 * surfaceLevel, matching get3DPoint in diagram.ts). surfaceLevel should be one
-// past the highest level any knot currently occupies (see getSurfaceLevelsCount in diagram.ts) so
-// the cap always sits above every knot.
-export function getSubSurfaceCapTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
-    const height = 8 * surfaceLevel;
+// surface level (surfaceLevelHeight * surfaceLevel, same surfaceLevelHeight get3DPoint in
+// diagram.ts uses). surfaceLevel should be one past the highest level any knot currently occupies
+// (see getSurfaceLevelsCount in diagram.ts) so the cap always sits above every knot.
+export function getSubSurfaceCapTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): SubSurfaceTriangle[] {
+    const height = surfaceLevelHeight * surfaceLevel;
     const boundary = getCapLoopPoints(loop).map((point) => shiftedBoundary.get(point.id)!);
     return splitSelfIntersectingBoundary(boundary).flatMap((subBoundary) => {
         if (subBoundary.length < 3) return [];
@@ -695,8 +695,8 @@ type WallSegment = {
 // - that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
 // of points and has no such requirement. Top edge uses the same shiftedBoundary as the cap; bottom
 // edge (real coords) is never shifted.
-function getSubSurfaceWallSegments(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): WallSegment[] {
-    const height = 8 * surfaceLevel;
+function getSubSurfaceWallSegments(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): WallSegment[] {
+    const height = surfaceLevelHeight * surfaceLevel;
     const points = getCapLoopPoints(loop);
     if (points.length < 3) return [];
 
@@ -715,8 +715,8 @@ function getSubSurfaceWallSegments(loop: SubsurfaceLoop, surfaceLevel: number, s
     return segments;
 }
 
-export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
-    return getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary).flatMap((segment) => segment.triangles);
+export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): SubSurfaceTriangle[] {
+    return getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary, surfaceLevelHeight).flatMap((segment) => segment.triangles);
 }
 
 // Wall triangles vs a target triangle soup (typically one knot's surfaceTriangles), skipping hits
@@ -730,8 +730,9 @@ export function getSubSurfaceWallIntersections(
     surfaceLevel: number,
     shiftedBoundary: Map<string, Coords2D>,
     targetTriangles: SubSurfaceTriangle[],
+    surfaceLevelHeight: number,
 ): [[number, number, number], [number, number, number]][] {
-    const wallSegments = getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary);
+    const wallSegments = getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary, surfaceLevelHeight);
     const results: [[number, number, number], [number, number, number]][] = [];
 
     for (const { triangles, loopA, loopB } of wallSegments) {

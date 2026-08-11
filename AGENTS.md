@@ -55,7 +55,10 @@ over/under into disconnected loops. Each loop later becomes one height
 layer in 3D and one Earcut-triangulated fan. This concept sits *inside*
 the Diagram stage, not the 3D stage — despite the two-tier meaning
 "surface" ends up with in the UI (2D surface levels vs. 3D-looking
-rendered mesh).
+rendered mesh). The vertical gap between levels is user-adjustable (viewer's
+"Surface Level Height" control, `controlsStore.surfaceLevelHeight`, defaulting to
+`DEFAULT_SURFACE_LEVEL_HEIGHT` in diagram.ts) and threaded as an explicit parameter through the
+3D-lifting functions rather than read from the store directly, keeping them pure.
 
 ## Code conventions actually used here
 

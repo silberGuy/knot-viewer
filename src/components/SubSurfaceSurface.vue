@@ -2,6 +2,7 @@
 	<SubSurfaceCap
 		:loop="loop"
 		:surfaceLevel="surfaceLevel"
+		:surfaceLevelHeight="surfaceLevelHeight"
 		:color="color"
 		:opacity="opacity"
 		:visible="visible && capVisible"
@@ -10,6 +11,7 @@
 	<SubSurfaceWall
 		:loop="loop"
 		:surfaceLevel="surfaceLevel"
+		:surfaceLevelHeight="surfaceLevelHeight"
 		:color="color"
 		:opacity="opacity"
 		:visible="visible"
@@ -28,6 +30,7 @@ const props = withDefaults(
 	defineProps<{
 		loop: SubsurfaceLoop;
 		surfaceLevel: number;
+		surfaceLevelHeight: number;
 		color?: string;
 		opacity?: number;
 		visible?: boolean;

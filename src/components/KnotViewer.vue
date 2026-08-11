@@ -31,7 +31,8 @@
 			<SubSurfaceSurface
 				v-if="controlsStore.isSubSurfaceActive"
 				:loop="subSurfaceLoop"
-				:surfaceLevel="subSurfaceCapLevel + 5"
+				:surfaceLevel="subSurfaceCapLevel"
+				:surfaceLevelHeight="controlsStore.surfaceLevelHeight"
 				:key="subSurfaceLoop.id"
 				:visible="controlsStore.showSubSurfaceSurface"
 				:capVisible="controlsStore.showSubSurfaceCap"
@@ -114,7 +115,9 @@ const subsurfaceWalkStore = useSubsurfaceWalkStore();
 const SUBSURFACE_COLOR = "#ff00ff";
 
 const diagram = computed(() => getDiagram(props.drawingData));
-const knots3D = computed(() => get3DKnots(diagram.value));
+const knots3D = computed(() =>
+	get3DKnots(diagram.value, controlsStore.surfaceLevelHeight),
+);
 
 // Purely cosmetic default framing - the knot's actual geometry (knots3D,
 // subSurfaceLoop) is always computed from raw, uncentered drawingData, so
@@ -191,7 +194,9 @@ const subSurfaceLoop = computed(() =>
 	),
 );
 
-const subSurfaceCapLevel = computed(() => getSurfaceLevelsCount(diagram.value));
+const subSurfaceCapLevel = computed(
+	() => getSurfaceLevelsCount(diagram.value) + 3,
+);
 
 // Same geometry as the rendered Subsurface wall (SubSurfaceSurface's own surfaceLevel/
 // capShiftDistance) - kept separate here since the wall component doesn't expose its triangles.
@@ -216,9 +221,10 @@ const subsurfaceIntersectionsLines = computed(() => {
 		);
 		const segments = getSubSurfaceWallIntersections(
 			subSurfaceLoop.value,
-			subSurfaceCapLevel.value + 5,
+			subSurfaceCapLevel.value,
 			shiftedCapBoundary.value,
 			knotTriangles,
+			controlsStore.surfaceLevelHeight,
 		);
 		const color = tinycolor(
 			mixSurfaceColors(SUBSURFACE_COLOR, getKnotColor(knot.diagramKnot.id)),

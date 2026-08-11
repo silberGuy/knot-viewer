@@ -18,6 +18,7 @@ import { getSubSurfaceWallTriangles } from "../utils/sub-surfaces";
 const props = defineProps<{
 	loop: SubsurfaceLoop;
 	surfaceLevel: number;
+	surfaceLevelHeight: number;
 	color?: string;
 	opacity?: number;
 	visible?: boolean;
@@ -29,6 +30,6 @@ const props = defineProps<{
 const triangles = computed(() =>
 	props.visible === false
 		? []
-		: getSubSurfaceWallTriangles(props.loop, props.surfaceLevel, props.shiftedBoundary)
+		: getSubSurfaceWallTriangles(props.loop, props.surfaceLevel, props.shiftedBoundary, props.surfaceLevelHeight)
 );
 </script>
