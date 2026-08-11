@@ -42,7 +42,8 @@ const props = defineProps<{
 }>();
 
 const lineColor = computed(() => {
-	if (props.showSurfaces) return 0xffffff;
+	if (props.showSurfaces)
+		return tinycolor(props.surfaceColor).lighten(20).toString();
 	return props.surfaceColor || "0x123456";
 });
 

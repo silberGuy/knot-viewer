@@ -21,6 +21,14 @@ function isPointBetweenPoints(point: CompPoint, p1: CompPoint, p2: CompPoint, ep
     return Math.abs((d1 + d2) - dTotal) < epsilon;
 }
 
+// A segment nearly parallel to a triangle's plane has no well-defined single crossing point -
+// the ray-triangle math divides by how steeply the segment crosses the plane, which is
+// numerically unstable near-parallel and can return a wildly displaced point instead of
+// correctly finding nothing. Wall triangles are built to share a vertex or edge with the knot
+// triangle they're tested against (ADR 0008), which routinely puts some of their edges close to
+// lying in that triangle's plane, so this guard matters here in practice, not just in theory.
+const PARALLEL_EPSILON = Math.sin(0.1 * Math.PI / 180);
+
 // Where does the (bounded) segment p1->p2 cross triangle's plane, within the triangle itself?
 // Generic over bare coordinate triples so it isn't tied to knots or any particular surface (ADR
 // 0008) - getTriangleLineIntersection below is the Point3D/Triangle3D-typed wrapper other code
@@ -34,6 +42,11 @@ function getRawTriangleLineIntersection(
     const P1 = new Vector3(...p1);
     const P2 = new Vector3(...p2);
     const lineDir = new Vector3().subVectors(P2, P1);
+
+    const normal = new Vector3().subVectors(B, A).cross(new Vector3().subVectors(C, A)).normalize();
+    const dirNormalized = lineDir.clone().normalize();
+    if (Math.abs(dirNormalized.dot(normal)) < PARALLEL_EPSILON) return null;
+
     const ray = new Ray(P1, lineDir);
 
     const intersection = ray.intersectTriangle(A, B, C, false, new Vector3());
