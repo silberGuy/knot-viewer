@@ -4,16 +4,34 @@ import type { CrossingWalkDirection, CrossingWalkDirections, Knot3D } from '../c
 import { getDefaultCrossingWalkDirections } from '../utils/sub-surfaces';
 
 // Holds the user's crossingWalkDirection overrides and selected walk-start point for the
-// Subsurface board. Both reset every time the Subsurface tab is entered (see
-// SubsurfaceBoard.vue) - safe to do because the knots (and therefore the crossings and
-// points) can't change while that tab is showing, so there's never a stale id to worry about.
+// Subsurface board. These persist across tab switches and round-trip through Save/Load
+// (see Topbar.vue) - no longer reset just for revisiting the tab.
 export const useSubsurfaceWalkStore = defineStore('subsurfaceWalk', () => {
     const crossingWalkDirections = ref<CrossingWalkDirections>(new Map());
     const selectedStartPointId = ref<string | undefined>(undefined);
 
-    function reset(knots: Knot3D[]) {
-        crossingWalkDirections.value = getDefaultCrossingWalkDirections(knots);
-        selectedStartPointId.value = undefined;
+    // Drops only overrides a drawing edit actually invalidated - not a full reset.
+    function pruneStale(knots: Knot3D[]) {
+        const validCrossingIds = new Set(getDefaultCrossingWalkDirections(knots).keys());
+        for (const crossingId of Array.from(crossingWalkDirections.value.keys())) {
+            if (!validCrossingIds.has(crossingId)) {
+                crossingWalkDirections.value.delete(crossingId);
+            }
+        }
+
+        if (selectedStartPointId.value) {
+            const validPointIds = new Set(knots.flatMap((knot) => knot.points.map((point) => point.id)));
+            if (!validPointIds.has(selectedStartPointId.value)) {
+                selectedStartPointId.value = undefined;
+            }
+        }
+    }
+
+    // Overwrites both with a loaded file's contents (or defaults - an empty map, no selected
+    // start point - when the file predates this feature).
+    function restore(directions: CrossingWalkDirections, startPointId: string | undefined) {
+        crossingWalkDirections.value = directions;
+        selectedStartPointId.value = startPointId;
     }
 
     function setDirection(crossingId: string, direction: CrossingWalkDirection) {
@@ -27,7 +45,8 @@ export const useSubsurfaceWalkStore = defineStore('subsurfaceWalk', () => {
     return {
         crossingWalkDirections,
         selectedStartPointId,
-        reset,
+        pruneStale,
+        restore,
         setDirection,
         setStartPoint,
     }

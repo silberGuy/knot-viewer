@@ -24,9 +24,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { DrawingData } from "../types";
+import type { CrossingWalkDirection, DrawingData } from "../types";
 import { useControlsStore } from "../../data/controls";
 import { useDrawingStore } from "../../data/drawing";
+import { useSubsurfaceWalkStore } from "../../data/subsurface-walk";
 
 const props = defineProps<{
 	drawingData?: DrawingData;
@@ -40,6 +41,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 
 const controlsStore = useControlsStore();
 const drawingStore = useDrawingStore();
+const subsurfaceWalkStore = useSubsurfaceWalkStore();
 
 const canSave = computed(() => {
 	const points = props.drawingData?.knots.map((knot) => knot.points).flat();
@@ -51,6 +53,8 @@ function saveToFile() {
 	const dataToSave = {
 		...drawingStore.getDrawingData(),
 		interFlipIds: Array.from(drawingStore.interFlipIds || []),
+		crossingWalkDirections: Array.from(subsurfaceWalkStore.crossingWalkDirections),
+		selectedStartPointId: subsurfaceWalkStore.selectedStartPointId,
 	};
 	const dataStr =
 		"data:text/json;charset=utf-8," +
@@ -76,6 +80,14 @@ function loadFromFile(event: Event) {
 				json.interFlipIds = new Set<string>(json.interFlipIds);
 			}
 			drawingStore.setDrawingData(json);
+			subsurfaceWalkStore.restore(
+				Array.isArray(json.crossingWalkDirections)
+					? new Map<string, CrossingWalkDirection>(json.crossingWalkDirections)
+					: new Map(),
+				typeof json.selectedStartPointId === "string"
+					? json.selectedStartPointId
+					: undefined,
+			);
 			emit("onLoadData", json);
 		} catch (error) {
 			console.error("Error parsing JSON:", error);

@@ -104,13 +104,13 @@ const knots3D = computed(() => {
 	return get3DKnots(getDiagram(drawingData));
 });
 
-// The knots (and therefore the crossings) are static for as long as this
-// board is showing, so seeding the crossingWalkDirection defaults once on
-// mount - which only happens when the Subsurface tab is switched into,
-// since App.vue toggles this board with v-if/v-else - is enough; there's no
-// later point where the set of crossings could change under it.
+// The knots (and therefore the crossings) are static for as long as this board is showing, so
+// pruning once on mount - which only happens when the Subsurface tab is switched into, since
+// App.vue toggles this board with v-if/v-else - is enough; there's no later point where the set
+// of crossings could change under it. Prune rather than reset: overrides now persist across tab
+// switches, this only clears ones a Drawing-tab edit actually invalidated.
 onMounted(() => {
-	subsurfaceWalkStore.reset(knots3D.value);
+	subsurfaceWalkStore.pruneStale(knots3D.value);
 });
 
 const subSurfaceLoop = computed(() =>

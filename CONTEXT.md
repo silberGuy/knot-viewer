@@ -39,8 +39,9 @@ resolves to a direction one way or another. The user can override this by clicki
 knot's own points on the **Subsurface board** (heading forward from there, per **Going forward
 on a knot**) — since the walk is a deterministic graph-walk, this matters most when a drawing's
 crossings resolve into more than one disjoint loop, letting the user reach one the default
-anchor wouldn't otherwise show. Resets to the default anchor each time the Subsurface tab is
-activated, same as **crossing walk direction** overrides.
+anchor wouldn't otherwise show. Persists across tab switches and through Save/Load, same as
+**crossing walk direction** overrides — only cleared if a drawing edit removes the point it
+refers to, falling back to the default anchor.
 
 **Going forward on a knot**:
 Stepping from one point to the next in a knot's own points array, wrapping at the end for a
@@ -69,9 +70,9 @@ one of those triangles' own far edges can independently produce a second, nearby
 that isn't at the 2D intersection at all; that one is still walked (using its default direction)
 but never gets its own arrow.) Clicking an arrow cycles to the next alternative. Every crossing
 point has a crossing walk direction at all times, defaulting to "cross to the upper knot, then
-forward" until the user overrides it by clicking. All crossing walk directions reset to their
-defaults each time the Subsurface tab is activated, since the knots — and therefore the
-crossings — can't change while that tab is showing.
+forward" until the user overrides it by clicking. Overrides persist across tab switches and
+through Save/Load; only a drawing edit that removes a given crossing clears its override, since
+the knots — and therefore the crossings — can't change while the Subsurface tab is showing.
 
 **Arrival direction**:
 The role and forward/backward step describing which line the **Subsurface walk** was actually
