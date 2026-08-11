@@ -12,12 +12,13 @@
 
 		<div v-if="controlsStore.activeTab === 'drawing'">
 			Hold <span class="key">Shift</span> to move knot as one,
-			<span class="key">Alt</span> to remove points
+			<span class="key">Alt</span> to remove points. Use both to remove a whole
+			knot
 		</div>
 		<div v-else>
-			Click an <span class="key">arrow</span> to control the Subsurface
-			loop's direction. Click a <span class="key">point</span> to force
-			the Subsurface loop through it.
+			Click an <span class="key">arrow</span> to control the Subsurface loop's
+			direction. Click a <span class="key">point</span> to force the Subsurface
+			loop through it.
 		</div>
 	</div>
 </template>
@@ -53,7 +54,9 @@ function saveToFile() {
 	const dataToSave = {
 		...drawingStore.getDrawingData(),
 		interFlipIds: Array.from(drawingStore.interFlipIds || []),
-		crossingWalkDirections: Array.from(subsurfaceWalkStore.crossingWalkDirections),
+		crossingWalkDirections: Array.from(
+			subsurfaceWalkStore.crossingWalkDirections,
+		),
 		selectedStartPointId: subsurfaceWalkStore.selectedStartPointId,
 	};
 	const dataStr =

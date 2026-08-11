@@ -1,8 +1,8 @@
 <template>
 	<div class="viewer-controls">
 		<button class="viewer-controls-header" @click="expanded = !expanded">
-			<span class="chevron" :class="{ collapsed: !expanded }">▾</span>
 			Controls
+			<span class="chevron" :class="{ collapsed: !expanded }">▾</span>
 		</button>
 
 		<div v-if="expanded" class="viewer-controls-body">
@@ -120,6 +120,7 @@ const capShiftDistance = computed({
 	top: 1em;
 	right: 1em;
 	z-index: 1;
+	width: 14em;
 	display: flex;
 	flex-direction: column;
 	gap: 0.5em;
@@ -132,10 +133,11 @@ const capShiftDistance = computed({
 .viewer-controls-header {
 	display: flex;
 	align-items: center;
-	gap: 0.4em;
+	justify-content: space-between;
 	background: none;
 	border: none;
 	padding: 0;
+	outline: none;
 	font: inherit;
 	font-weight: bold;
 	color: black;
@@ -143,12 +145,14 @@ const capShiftDistance = computed({
 }
 
 .chevron {
+	font-size: 1.2em;
+	margin-top: -0.1em;
 	display: inline-block;
 	transition: transform 0.15s ease;
 }
 
 .chevron.collapsed {
-	transform: rotate(-90deg);
+	transform: rotate(90deg);
 }
 
 .viewer-controls-body {

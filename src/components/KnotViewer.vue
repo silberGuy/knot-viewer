@@ -1,6 +1,7 @@
 <template>
 	<div class="knot-viewer">
 		<ViewerControls />
+		<ViewerInfo />
 		<TresCanvas>
 			<TresPerspectiveCamera
 				:position="cameraPosition"
@@ -86,6 +87,7 @@ import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
 import SubSurfaceSurface from "./SubSurfaceSurface.vue";
 import ViewerControls from "./ViewerControls.vue";
+import ViewerInfo from "./ViewerInfo.vue";
 import { useControlsStore } from "../data/controls";
 import { useSubsurfaceWalkStore } from "../data/subsurface-walk";
 import {
