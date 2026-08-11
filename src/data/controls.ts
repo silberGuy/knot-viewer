@@ -7,6 +7,7 @@ export const useControlsStore = defineStore('showSurfaces', () => {
     const [showSurfacesIntersections, toggleShowSurfacesIntersections] = useToggle(false);
     const [showSubSurfaceSurface, toggleShowSubSurfaceSurface] = useToggle(true);
     const [showSubSurfaceCap, toggleShowSubSurfaceCap] = useToggle(true);
+    const [subsurfaceIntersections, toggleSubsurfaceIntersections] = useToggle(true);
     const subSurfaceOpacity = ref(0.6);
     const capShiftDistance = ref(0);
 
@@ -22,6 +23,8 @@ export const useControlsStore = defineStore('showSurfaces', () => {
         toggleShowSubSurfaceSurface,
         showSubSurfaceCap,
         toggleShowSubSurfaceCap,
+        subsurfaceIntersections,
+        toggleSubsurfaceIntersections,
         subSurfaceOpacity,
         capShiftDistance,
         activeTab,

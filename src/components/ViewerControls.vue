@@ -37,6 +37,15 @@
 		</label>
 
 		<label v-if="controlsStore.isSubSurfaceActive">
+			<input
+				type="checkbox"
+				id="toggle-subsurface-intersections"
+				v-model="controlsStore.subsurfaceIntersections"
+			/>
+			Show Subsurface Intersections
+		</label>
+
+		<label v-if="controlsStore.isSubSurfaceActive">
 			Subsurface Surface Opacity
 			<input
 				type="range"

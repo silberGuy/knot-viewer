@@ -21,23 +21,33 @@ function isPointBetweenPoints(point: CompPoint, p1: CompPoint, p2: CompPoint, ep
     return Math.abs((d1 + d2) - dTotal) < epsilon;
 }
 
-function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point3D]) {
-    const B = new Vector3(...triangle.points[0].coords)
-    const A = new Vector3(...triangle.points[1].coords)
-    const C = new Vector3(...triangle.points[2].coords)
-    const P1 = new Vector3(...line[0].coords)
-    const P2 = new Vector3(...line[1].coords)
+// Where does the (bounded) segment p1->p2 cross triangle's plane, within the triangle itself?
+// Generic over bare coordinate triples so it isn't tied to knots or any particular surface (ADR
+// 0008) - getTriangleLineIntersection below is the Point3D/Triangle3D-typed wrapper other code
+// here needs for knot-walk bookkeeping.
+function getRawTriangleLineIntersection(
+    triangle: SubSurfaceTriangle,
+    p1: [number, number, number],
+    p2: [number, number, number],
+): [number, number, number] | null {
+    const [A, B, C] = triangle.map((c) => new Vector3(...c));
+    const P1 = new Vector3(...p1);
+    const P2 = new Vector3(...p2);
+    const lineDir = new Vector3().subVectors(P2, P1);
+    const ray = new Ray(P1, lineDir);
 
-    const lineDir = new Vector3().subVectors(P2, P1)
-    const ray = new Ray(P1, lineDir)
-
-    const intersection = ray.intersectTriangle(A, B, C, false, new Vector3())
+    const intersection = ray.intersectTriangle(A, B, C, false, new Vector3());
     if (!intersection) return null;
 
-    const t = intersection.clone().sub(P1).dot(lineDir) / lineDir.lengthSq()
+    const t = intersection.clone().sub(P1).dot(lineDir) / lineDir.lengthSq();
     if (t < 0 || t > 1) return null;
 
     return [intersection.x, intersection.y, intersection.z];
+}
+
+function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point3D]) {
+    const triangleCoords = triangle.points.map((p) => p.coords) as SubSurfaceTriangle;
+    return getRawTriangleLineIntersection(triangleCoords, line[0].coords, line[1].coords);
 }
 
 function deduplicatePoints(points: SubSurfacesPoint[], epsilon = 0.01) {
@@ -644,19 +654,53 @@ export function getSubSurfaceCapTriangles(loop: SubsurfaceLoop, surfaceLevel: nu
     });
 }
 
-// Builds the walls connecting the cap down to the loop's own real-height points: for every pair
-// of adjacent loop points (wrapping last back to first, since the walk is a closed ring), a
-// rectangle spans from their flattened, shared-height cap positions down to their real coords.
-// Deliberately walks the raw loop, not the cap's own self-intersection split (ADR 0005/0007) -
-// that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
-// of points and has no such requirement. Top edge uses the same shiftedBoundary as the cap;
-// bottom edge (real coords) is never shifted.
-export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
+function getRawTrianglesIntersectionAsymmetric(triangleA: SubSurfaceTriangle, triangleB: SubSurfaceTriangle): [number, number, number][] {
+    const edges: [[number, number, number], [number, number, number]][] = [
+        [triangleA[0], triangleA[1]],
+        [triangleA[1], triangleA[2]],
+        [triangleA[2], triangleA[0]],
+    ];
+    return edges
+        .map(([p1, p2]) => getRawTriangleLineIntersection(triangleB, p1, p2))
+        .filter((p): p is [number, number, number] => p !== null);
+}
+
+// A pair of triangles from any two triangle soups generally intersects along one segment (both
+// triangles being convex and planar) - this returns that segment, or null if they don't cross.
+// Deliberately generic over bare coordinates (see ADR 0008) so it isn't tied to knots, the wall,
+// or any other specific surface - the cap could use this too once more than one Subsurface
+// surface exists to test it against.
+function getTrianglesIntersectionSegment(triangleA: SubSurfaceTriangle, triangleB: SubSurfaceTriangle): [[number, number, number], [number, number, number]] | null {
+    const points = [
+        ...getRawTrianglesIntersectionAsymmetric(triangleA, triangleB),
+        ...getRawTrianglesIntersectionAsymmetric(triangleB, triangleA),
+    ];
+    const unique = deduplicatePoints(points.map((coords, i) => ({ id: `${i}`, coords })));
+    if (unique.length < 2) return null;
+    return [unique[0].coords, unique[1].coords];
+}
+
+// One wall rectangle (as its two triangles) plus the loop edge it's built on - loopA/loopB are
+// exactly the bottom edge shared by both triangles, kept alongside them for
+// getSubSurfaceWallIntersections below, which needs that edge to recognize its own degenerate hits.
+type WallSegment = {
+    triangles: [SubSurfaceTriangle, SubSurfaceTriangle];
+    loopA: [number, number, number];
+    loopB: [number, number, number];
+};
+
+// For every pair of adjacent loop points (wrapping last back to first, since the walk is a closed
+// ring), a rectangle spans from their flattened, shared-height cap positions down to their real
+// coords. Deliberately walks the raw loop, not the cap's own self-intersection split (ADR 0005/0007)
+// - that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
+// of points and has no such requirement. Top edge uses the same shiftedBoundary as the cap; bottom
+// edge (real coords) is never shifted.
+function getSubSurfaceWallSegments(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): WallSegment[] {
     const height = 8 * surfaceLevel;
     const points = getCapLoopPoints(loop);
     if (points.length < 3) return [];
 
-    const triangles: SubSurfaceTriangle[] = [];
+    const segments: WallSegment[] = [];
     for (let i = 0; i < points.length; i++) {
         const next = (i + 1) % points.length;
         const capA = shiftedBoundary.get(points[i].id)!;
@@ -666,7 +710,46 @@ export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: n
         const loopA = points[i].coords;
         const loopB = points[next].coords;
 
-        triangles.push([a, b, loopB], [a, loopB, loopA]);
+        segments.push({ triangles: [[a, b, loopB], [a, loopB, loopA]], loopA, loopB });
     }
-    return triangles;
+    return segments;
+}
+
+export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>): SubSurfaceTriangle[] {
+    return getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary).flatMap((segment) => segment.triangles);
+}
+
+// Wall triangles vs a target triangle soup (typically one knot's surfaceTriangles), skipping hits
+// that just retrace a wall segment's own bottom edge (CONTEXT.md's "Subsurface intersection").
+// That edge is guaranteed to coincide with a real knot edge - either directly (an ordinary,
+// non-crossing loop segment IS two adjacent points of one knot's own diagram) or via a crossing
+// point (interpolated exactly onto another knot's surface) - so any result confined to that edge
+// is the wall meeting its own origin, not a real piercing through a surface's interior.
+export function getSubSurfaceWallIntersections(
+    loop: SubsurfaceLoop,
+    surfaceLevel: number,
+    shiftedBoundary: Map<string, Coords2D>,
+    targetTriangles: SubSurfaceTriangle[],
+): [[number, number, number], [number, number, number]][] {
+    const wallSegments = getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary);
+    const results: [[number, number, number], [number, number, number]][] = [];
+
+    for (const { triangles, loopA, loopB } of wallSegments) {
+        for (const wallTriangle of triangles) {
+            for (const targetTriangle of targetTriangles) {
+                const segment = getTrianglesIntersectionSegment(wallTriangle, targetTriangle);
+                if (!segment) continue;
+
+                const [p1, p2] = segment;
+                const isOwnEdge = [p1, p2].every((p) =>
+                    isPointBetweenPoints({ coords: p }, { coords: loopA }, { coords: loopB }),
+                );
+                if (isOwnEdge) continue;
+
+                results.push(segment);
+            }
+        }
+    }
+
+    return results;
 }

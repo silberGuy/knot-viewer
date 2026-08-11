@@ -137,6 +137,12 @@ a wall rectangle, being local to one pair of points, has no such requirement (se
 Rendered by its own component (`SubSurfaceWall.vue`), used by `SubSurfaceSurface.vue`.
 _Avoid_: wall surface (ambiguous with the cap or a knot's own surface)
 
+**Subsurface intersection**:
+A point where the **Subsurface wall**'s triangles cross a knot's own 3D surface. The cap is
+excluded (see ADR 0008) — it always sits above every knot's height, so it can never intersect one.
+Shown only in the Viewer, toggled independently of the knot-vs-knot surface intersections.
+_Avoid_: surface intersection (that's knot-vs-knot; this is wall-vs-knot)
+
 **Cap shift**:
 A live offset (`capShiftDistance`) on the **Subsurface cap**'s boundary, coupled to the
 **Subsurface wall**'s top edge — the wall's bottom edge and the knots' own points are untouched.

@@ -26,7 +26,7 @@
 				v-if="controlsStore.isSubSurfaceActive"
 				:knot="subSurfaceLoop"
 				:showSurfaces="false"
-				surfaceColor="#ff00ff"
+				:surfaceColor="SUBSURFACE_COLOR"
 			/>
 			<SubSurfaceSurface
 				v-if="controlsStore.isSubSurfaceActive"
@@ -37,10 +37,18 @@
 				:capVisible="controlsStore.showSubSurfaceCap"
 				:opacity="controlsStore.subSurfaceOpacity"
 				:capShiftDistance="controlsStore.capShiftDistance"
-				color="#ff00ff"
+				:color="SUBSURFACE_COLOR"
 			/>
 			<ViewerLine
 				v-for="linePoints in surfaceIntersectionsLines"
+				:key="linePoints.id"
+				:points="linePoints.points"
+				:color="linePoints.color"
+				:width="6"
+				noDepthTest
+			/>
+			<ViewerLine
+				v-for="linePoints in subsurfaceIntersectionsLines"
 				:key="linePoints.id"
 				:points="linePoints.points"
 				:color="linePoints.color"
@@ -67,7 +75,11 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { DrawingData, SubSurfacesPoint } from "./types";
+import type {
+	DrawingData,
+	SubSurfacesPoint,
+	SubSurfaceTriangle,
+} from "./types";
 import { TresCanvas, extend } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
@@ -82,7 +94,9 @@ import {
 } from "../utils/diagram";
 import {
 	getKnotsSurfacesIntersections,
+	getShiftedCapBoundary,
 	getSubSurfaceIntersectionsLoop,
+	getSubSurfaceWallIntersections,
 	getSurfaceIntersectionsPairs,
 } from "../utils/sub-surfaces";
 import tinycolor from "tinycolor2";
@@ -96,6 +110,8 @@ const props = defineProps<{
 
 const controlsStore = useControlsStore();
 const subsurfaceWalkStore = useSubsurfaceWalkStore();
+
+const SUBSURFACE_COLOR = "#ff00ff";
 
 const diagram = computed(() => getDiagram(props.drawingData));
 const knots3D = computed(() => get3DKnots(diagram.value));
@@ -129,6 +145,18 @@ function getKnotColor(knotId: string) {
 	);
 }
 
+// Shared with the Subsurface wall's own intersection lines below, so both mix/saturate/lighten
+// the same way rather than drifting into two similar-but-different color rules.
+function mixSurfaceColors(color1: string, color2: string) {
+	let color = tinycolor.mix(color1, color2, 50).saturate(50);
+
+	if (!color.isLight()) {
+		color = color.lighten(20);
+	}
+
+	return color.toHexString();
+}
+
 function getSurfaceIntersectionsColor(
 	p1: SubSurfacesPoint,
 	p2: SubSurfacesPoint,
@@ -142,15 +170,7 @@ function getSurfaceIntersectionsColor(
 			p2.surfaceIntersection.twinPointKnotId!,
 		]),
 	];
-	const color1 = getKnotColor(knotsIds[0]);
-	const color2 = getKnotColor(knotsIds[1]);
-	let color = tinycolor.mix(color1, color2, 50).saturate(50);
-
-	if (!color.isLight()) {
-		color = color.lighten(20);
-	}
-
-	return color.toHexString();
+	return mixSurfaceColors(getKnotColor(knotsIds[0]), getKnotColor(knotsIds[1]));
 }
 
 const surfaceIntersectionsLines = computed(() => {
@@ -172,6 +192,50 @@ const subSurfaceLoop = computed(() =>
 );
 
 const subSurfaceCapLevel = computed(() => getSurfaceLevelsCount(diagram.value));
+
+// Same geometry as the rendered Subsurface wall (SubSurfaceSurface's own surfaceLevel/
+// capShiftDistance) - kept separate here since the wall component doesn't expose its triangles.
+const shiftedCapBoundary = computed(() =>
+	getShiftedCapBoundary(subSurfaceLoop.value, controlsStore.capShiftDistance),
+);
+
+// Wall-vs-knot-surface intersections only (CONTEXT.md's "Subsurface intersection", ADR 0008) -
+// the cap never reaches a knot's height, so it's never tested. getSubSurfaceWallIntersections
+// itself drops hits that just retrace a wall segment's own bottom edge against the knot it came
+// from (see its own doc comment).
+const subsurfaceIntersectionsLines = computed(() => {
+	if (
+		!controlsStore.isSubSurfaceActive ||
+		!controlsStore.subsurfaceIntersections
+	)
+		return [];
+
+	return knots3D.value.flatMap((knot) => {
+		const knotTriangles: SubSurfaceTriangle[] = knot.surfaceTriangles.map(
+			(triangle) => triangle.points.map((p) => p.coords) as SubSurfaceTriangle,
+		);
+		const segments = getSubSurfaceWallIntersections(
+			subSurfaceLoop.value,
+			subSurfaceCapLevel.value + 5,
+			shiftedCapBoundary.value,
+			knotTriangles,
+		);
+		const color = tinycolor(
+			mixSurfaceColors(SUBSURFACE_COLOR, getKnotColor(knot.diagramKnot.id)),
+		)
+			.lighten(20)
+			.toHexString();
+
+		return segments.map((points, i) => ({
+			id: `subsurface-inter-${knot.diagramKnot.id}-${i}`,
+			points: points.map((coords, j) => ({
+				id: `subsurface-inter-${knot.diagramKnot.id}-${i}-${j}`,
+				coords,
+			})),
+			color,
+		}));
+	});
+});
 </script>
 
 <style scoped>
