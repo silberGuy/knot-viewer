@@ -28,7 +28,7 @@
 	border: none;
 	background: rgba(255, 255, 255, 0.85);
 	color: #1e1e1e;
-	font-weight: 900;
+	font-weight: 800;
 	cursor: default;
 	display: flex;
 	align-items: center;

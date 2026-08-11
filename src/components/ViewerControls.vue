@@ -120,7 +120,7 @@ const capShiftDistance = computed({
 	top: 1em;
 	right: 1em;
 	z-index: 1;
-	width: 14em;
+	width: 22em;
 	display: flex;
 	flex-direction: column;
 	gap: 0.5em;
