@@ -27,17 +27,13 @@
 				:knots="drawingDataForViewer.knots"
 				:interFlipIds="drawingDataForViewer.interFlipIds"
 			/>
+			<BoardInfo @rerender="updateViewerData" />
 		</div>
 		<KnotViewer
 			:drawingData="drawingDataForViewer"
 			:key="`${drawingData.knots.map((knot) => knot.id).join('-')}_${
 				controlsStore.isSubSurfaceActive
 			}`"
-		/>
-		<Topbar
-			class="topbar"
-			:drawingData="drawingData"
-			@onLoadData="onLoadData"
 		/>
 	</div>
 </template>
@@ -50,7 +46,7 @@ import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
 import SubsurfaceBoard from "./components/SubsurfaceBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
-import Topbar from "./components/Topbar/Topbar.vue";
+import BoardInfo from "./components/BoardInfo.vue";
 import { useControlsStore } from "./data/controls";
 import { useDrawingStore } from "./data/drawing";
 
@@ -71,11 +67,6 @@ const hasEnoughPointsForSubsurface = computed(
 
 const drawingDataForViewer = ref<DrawingData>(cloneDeep(drawingData.value));
 
-function onLoadData(value: DrawingData) {
-	drawingStore.setDrawingData(value);
-	updateViewerData();
-}
-
 function updateViewerData() {
 	drawingDataForViewer.value = cloneDeep(drawingData.value);
 }
@@ -89,13 +80,9 @@ function updateViewerData() {
 
 	display: grid;
 	grid-template-columns: 47% 53%;
-	grid-template-rows: 60px 1fr;
+	grid-template-rows: 1fr;
 
-	grid-template-areas: "top top" "drawing viewer";
-}
-
-.topbar {
-	grid-area: top;
+	grid-template-areas: "drawing viewer";
 }
 
 .board-pane {

@@ -5,7 +5,7 @@ import { getDefaultCrossingWalkDirections } from '../utils/sub-surfaces';
 
 // Holds the user's crossingWalkDirection overrides and selected walk-start point for the
 // Subsurface board. These persist across tab switches and round-trip through Save/Load
-// (see Topbar.vue) - no longer reset just for revisiting the tab.
+// (see BoardInfo.vue) - no longer reset just for revisiting the tab.
 export const useSubsurfaceWalkStore = defineStore('subsurfaceWalk', () => {
     const crossingWalkDirections = ref<CrossingWalkDirections>(new Map());
     const selectedStartPointId = ref<string | undefined>(undefined);
