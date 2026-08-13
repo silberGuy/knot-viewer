@@ -1,6 +1,6 @@
 # Presentational `KnotShape` component, wrapped by `DrawingKnot` for interactivity
 
-To add a read-only **Subsurface** board alongside the editable **Drawing** board, we needed a
+To add a read-only **Secondary** board alongside the editable **Drawing** board, we needed a
 way to render a knot's lines and points without the dragging/click-to-close/click-to-remove
 behavior that `DrawingKnot` and `DrawingPoint` currently bake in unconditionally (e.g.
 `DrawingPoint` calls `useDraggable` in `setup()` with no way to opt out).
@@ -15,6 +15,6 @@ Instead, `DrawingKnot`'s rendering (line/point layout, driven by `getKnotLines`)
 into a new presentational component, `KnotShape`, with no interaction logic of its own — it
 exposes scoped slots (`#line`, `#point`) whose default content is plain, inert markup.
 `DrawingKnot` wraps `KnotShape` and fills those slots with the interactive pieces (draggable
-points, close/remove/insert handlers). A static board (e.g. `SubsurfaceBoard`) uses `KnotShape`
+points, close/remove/insert handlers). A static board (e.g. `SecondaryBoard`) uses `KnotShape`
 directly with no slots filled, guaranteeing it can never accidentally inherit editing behavior
 — there's no prop to forget to set.

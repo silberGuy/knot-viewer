@@ -4,15 +4,15 @@
 currently defined relative to whichever of a crossing's two points the walk happens to be
 standing on when it resolves that crossing (see CONTEXT.md's "Crossing walk direction" entry).
 That's workable mid-walk, where there's always a "current" point for "self" to mean something
-relative to. It breaks down for `getWalkStart` (`sub-surfaces.ts`), whose entire job is to decide
+relative to. It breaks down for `getWalkStart` (`secondaries.ts`), whose entire job is to decide
 which knot to start on *before* any walk state exists - there's no "current" point yet to resolve
 "self" against. A crossing's id (`getCrossingId`) is deliberately order-independent - the same id
 names the crossing however it's first reached - but a stored `"selfForward"` has no such fixed
 meaning: it means "continue on knot A" if the walk happens to be standing on A's copy of the
 crossing point, and "continue on knot B" if it's standing on B's. `getWalkStart` currently papers
-over this by iterating `knotsWithSubSurfacePoints` in whatever order the input `knots` array
+over this by iterating `knotsWithSecondaryPoints` in whatever order the input `knots` array
 happens to be in, and treating the first knot it finds a matching point on as "self"
-(`sub-surfaces.ts:373-391`). Which knot actually anchors the walk is therefore an accident of
+(`secondaries.ts:373-391`). Which knot actually anchors the walk is therefore an accident of
 array order, not something the stored direction - or the user who set it via the crossing-walk
 arrow - actually determines. The same ambiguity means a persisted per-crossing override can't
 really be reasoned about as "this crossing's direction," only as "this crossing's direction, from
@@ -44,7 +44,7 @@ consistent, not meaningful.
 Resolving a crossing then becomes: compare the *named* role in the stored direction against the
 current point's own fixed role. Same role means stay on the knot the walk is already on (the old
 "self" case); different role means jump to the twin point on the other knot (the old "twin" case).
-This is exactly `advance`'s existing branch structure (`sub-surfaces.ts:287-323`) with the
+This is exactly `advance`'s existing branch structure (`secondaries.ts:287-323`) with the
 condition swapped from `isTwinDirection(direction)` to a role comparison - the jump mechanics
 (finding the twin point, `justArrivedViaJump`) don't change.
 

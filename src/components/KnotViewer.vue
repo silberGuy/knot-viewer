@@ -11,7 +11,7 @@
 			>
 				<!-- decay=0: default physically-correct falloff (decay=2) fades to ~0 at this
 				scene's scale (raw SVG pixel coordinates, often hundreds of units across), which
-				made the lit Subsurface surface look flat/unshaded again. -->
+				made the lit Secondary surface look flat/unshaded again. -->
 				<TresPointLight :intensity="2" :decay="0" />
 			</TresPerspectiveCamera>
 			<TresAmbientLight :intensity="0.4" />
@@ -24,22 +24,22 @@
 				:showSurfaces="controlsStore.showSurfaces"
 			/>
 			<KnotViewerKnot
-				v-if="controlsStore.isSubSurfaceActive"
-				:knot="subSurfaceLoop"
+				v-if="controlsStore.isSecondaryActive"
+				:knot="secondaryLoop"
 				:showSurfaces="false"
-				:surfaceColor="SUBSURFACE_COLOR"
+				:surfaceColor="SECONDARY_COLOR"
 			/>
-			<SubSurfaceSurface
-				v-if="controlsStore.isSubSurfaceActive"
-				:loop="subSurfaceLoop"
-				:surfaceLevel="subSurfaceCapLevel"
+			<SecondarySurface
+				v-if="controlsStore.isSecondaryActive"
+				:loop="secondaryLoop"
+				:surfaceLevel="secondaryCapLevel"
 				:surfaceLevelHeight="controlsStore.surfaceLevelHeight"
-				:key="subSurfaceLoop.id"
-				:visible="controlsStore.showSubSurfaceSurface"
-				:capVisible="controlsStore.showSubSurfaceCap"
-				:opacity="controlsStore.subSurfaceOpacity"
+				:key="secondaryLoop.id"
+				:visible="controlsStore.showSecondarySurface"
+				:capVisible="controlsStore.showSecondaryCap"
+				:opacity="controlsStore.secondaryOpacity"
 				:capShiftDistance="controlsStore.capShiftDistance"
-				:color="SUBSURFACE_COLOR"
+				:color="SECONDARY_COLOR"
 			/>
 			<ViewerLine
 				v-for="linePoints in surfaceIntersectionsLines"
@@ -50,7 +50,7 @@
 				noDepthTest
 			/>
 			<ViewerLine
-				v-for="linePoints in subsurfaceIntersectionsLines"
+				v-for="linePoints in secondaryIntersectionsLines"
 				:key="linePoints.id"
 				:points="linePoints.points"
 				:color="linePoints.color"
@@ -79,17 +79,17 @@
 import { computed } from "vue";
 import type {
 	DrawingData,
-	SubSurfacesPoint,
-	SubSurfaceTriangle,
+	SecondariesPoint,
+	SecondaryTriangle,
 } from "./types";
 import { TresCanvas, extend } from "@tresjs/core";
 import { OrbitControls, Grid } from "@tresjs/cientos";
 import KnotViewerKnot from "./KnotViewerKnot.vue";
-import SubSurfaceSurface from "./SubSurfaceSurface.vue";
+import SecondarySurface from "./SecondarySurface.vue";
 import ViewerControls from "./ViewerControls.vue";
 import ViewerInfo from "./ViewerInfo.vue";
 import { useControlsStore } from "../data/controls";
-import { useSubsurfaceWalkStore } from "../data/subsurface-walk";
+import { useSecondaryWalkStore } from "../data/secondary-walk";
 import {
 	get3DKnots,
 	getDiagram,
@@ -98,10 +98,10 @@ import {
 import {
 	getKnotsSurfacesIntersections,
 	getShiftedCapBoundary,
-	getSubSurfaceIntersectionsLoop,
-	getSubSurfaceWallIntersections,
+	getSecondaryIntersectionsLoop,
+	getSecondaryWallIntersections,
 	getSurfaceIntersectionsPairs,
-} from "../utils/sub-surfaces";
+} from "../utils/secondary-surfaces";
 import tinycolor from "tinycolor2";
 import ViewerLine from "./ViewerLine.vue";
 
@@ -112,9 +112,9 @@ const props = defineProps<{
 }>();
 
 const controlsStore = useControlsStore();
-const subsurfaceWalkStore = useSubsurfaceWalkStore();
+const secondaryWalkStore = useSecondaryWalkStore();
 
-const SUBSURFACE_COLOR = "#ff00ff";
+const SECONDARY_COLOR = "#ff00ff";
 
 const diagram = computed(() => getDiagram(props.drawingData));
 const knots3D = computed(() =>
@@ -122,8 +122,8 @@ const knots3D = computed(() =>
 );
 
 // Purely cosmetic default framing - the knot's actual geometry (knots3D,
-// subSurfaceLoop) is always computed from raw, uncentered drawingData, so
-// it stays identical to what SubsurfaceBoard computes for the same
+// secondaryLoop) is always computed from raw, uncentered drawingData, so
+// it stays identical to what SecondaryBoard computes for the same
 // drawing; this never touches that. Knot points are drawn in the Drawing
 // board's raw SVG pixel coordinates (no viewBox), so "centered" here means
 // facing where that board's own center would fall, not the 3D origin -
@@ -150,7 +150,7 @@ function getKnotColor(knotId: string) {
 	);
 }
 
-// Shared with the Subsurface wall's own intersection lines below, so both mix/saturate/lighten
+// Shared with the Secondary wall's own intersection lines below, so both mix/saturate/lighten
 // the same way rather than drifting into two similar-but-different color rules.
 function mixSurfaceColors(color1: string, color2: string) {
 	let color = tinycolor.mix(color1, color2, 50).saturate(50);
@@ -163,8 +163,8 @@ function mixSurfaceColors(color1: string, color2: string) {
 }
 
 function getSurfaceIntersectionsColor(
-	p1: SubSurfacesPoint,
-	p2: SubSurfacesPoint,
+	p1: SecondariesPoint,
+	p2: SecondariesPoint,
 ) {
 	if (!p1.surfaceIntersection || !p2.surfaceIntersection) return "white";
 	const knotsIds = [
@@ -189,55 +189,55 @@ const surfaceIntersectionsLines = computed(() => {
 	}));
 });
 
-const subSurfaceLoop = computed(() =>
-	getSubSurfaceIntersectionsLoop(
+const secondaryLoop = computed(() =>
+	getSecondaryIntersectionsLoop(
 		knots3D.value,
-		subsurfaceWalkStore.crossingWalkDirections,
+		secondaryWalkStore.crossingWalkDirections,
 	),
 );
 
-const subSurfaceCapLevel = computed(
+const secondaryCapLevel = computed(
 	() => getSurfaceLevelsCount(diagram.value) + 3,
 );
 
-// Same geometry as the rendered Subsurface wall (SubSurfaceSurface's own surfaceLevel/
+// Same geometry as the rendered Secondary wall (SecondarySurface's own surfaceLevel/
 // capShiftDistance) - kept separate here since the wall component doesn't expose its triangles.
 const shiftedCapBoundary = computed(() =>
-	getShiftedCapBoundary(subSurfaceLoop.value, controlsStore.capShiftDistance),
+	getShiftedCapBoundary(secondaryLoop.value, controlsStore.capShiftDistance),
 );
 
-// Wall-vs-knot-surface intersections only (CONTEXT.md's "Subsurface intersection", ADR 0008) -
-// the cap never reaches a knot's height, so it's never tested. getSubSurfaceWallIntersections
+// Wall-vs-knot-surface intersections only (CONTEXT.md's "Secondary intersection", ADR 0008) -
+// the cap never reaches a knot's height, so it's never tested. getSecondaryWallIntersections
 // itself drops hits that just retrace a wall segment's own bottom edge against the knot it came
 // from (see its own doc comment).
-const subsurfaceIntersectionsLines = computed(() => {
+const secondaryIntersectionsLines = computed(() => {
 	if (
-		!controlsStore.isSubSurfaceActive ||
-		!controlsStore.subsurfaceIntersections
+		!controlsStore.isSecondaryActive ||
+		!controlsStore.secondaryIntersections
 	)
 		return [];
 
 	return knots3D.value.flatMap((knot) => {
-		const knotTriangles: SubSurfaceTriangle[] = knot.surfaceTriangles.map(
-			(triangle) => triangle.points.map((p) => p.coords) as SubSurfaceTriangle,
+		const knotTriangles: SecondaryTriangle[] = knot.surfaceTriangles.map(
+			(triangle) => triangle.points.map((p) => p.coords) as SecondaryTriangle,
 		);
-		const segments = getSubSurfaceWallIntersections(
-			subSurfaceLoop.value,
-			subSurfaceCapLevel.value,
+		const segments = getSecondaryWallIntersections(
+			secondaryLoop.value,
+			secondaryCapLevel.value,
 			shiftedCapBoundary.value,
 			knotTriangles,
 			controlsStore.surfaceLevelHeight,
 		);
 		const color = tinycolor(
-			mixSurfaceColors(SUBSURFACE_COLOR, getKnotColor(knot.diagramKnot.id)),
+			mixSurfaceColors(SECONDARY_COLOR, getKnotColor(knot.diagramKnot.id)),
 		)
 			.lighten(20)
 			.toHexString();
 
 		return segments.map((points, i) => ({
-			id: `subsurface-inter-${knot.diagramKnot.id}-${i}`,
+			id: `secondary-inter-${knot.diagramKnot.id}-${i}`,
 			points: points.map((coords, j) => ({
-				id: `subsurface-inter-${knot.diagramKnot.id}-${i}-${j}`,
+				id: `secondary-inter-${knot.diagramKnot.id}-${i}-${j}`,
 				coords,
 			})),
 			color,

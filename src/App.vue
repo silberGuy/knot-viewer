@@ -9,11 +9,11 @@
 					Drawing
 				</button>
 				<button
-					:class="{ active: controlsStore.activeTab === 'subsurface' }"
-					:disabled="!hasEnoughPointsForSubsurface"
-					@click="controlsStore.activeTab = 'subsurface'"
+					:class="{ active: controlsStore.activeTab === 'secondary' }"
+					:disabled="!hasEnoughPointsForSecondary"
+					@click="controlsStore.activeTab = 'secondary'"
 				>
-					Subsurface
+					Secondary
 				</button>
 			</div>
 			<DrawingBoard
@@ -22,7 +22,7 @@
 				v-model:interFlipIds="interFlipIds"
 				@rerender="updateViewerData"
 			/>
-			<SubsurfaceBoard
+			<SecondaryBoard
 				v-else
 				:knots="drawingDataForViewer.knots"
 				:interFlipIds="drawingDataForViewer.interFlipIds"
@@ -32,7 +32,7 @@
 		<KnotViewer
 			:drawingData="drawingDataForViewer"
 			:key="`${drawingData.knots.map((knot) => knot.id).join('-')}_${
-				controlsStore.isSubSurfaceActive
+				controlsStore.isSecondaryActive
 			}`"
 		/>
 		<div class="app-version">v{{ appVersion }}</div>
@@ -45,7 +45,7 @@ import { storeToRefs } from "pinia";
 import cloneDeep from "clone-deep";
 import type { DrawingData } from "./components/types";
 import DrawingBoard from "./components/DrawingBoard.vue";
-import SubsurfaceBoard from "./components/SubsurfaceBoard.vue";
+import SecondaryBoard from "./components/SecondaryBoard.vue";
 import KnotViewer from "./components/KnotViewer.vue";
 import BoardInfo from "./components/BoardInfo.vue";
 import { useControlsStore } from "./data/controls";
@@ -61,9 +61,9 @@ const drawingData = computed<DrawingData>(() => ({
 	interFlipIds: interFlipIds.value,
 }));
 
-// Fewer than 3 points total can't form a meaningful subsurface loop, so the
-// Subsurface tab stays disabled until there's enough to work with.
-const hasEnoughPointsForSubsurface = computed(
+// Fewer than 3 points total can't form a meaningful secondary loop, so the
+// Secondary tab stays disabled until there's enough to work with.
+const hasEnoughPointsForSecondary = computed(
 	() => knots.value.reduce((count, knot) => count + knot.points.length, 0) >= 3,
 );
 

@@ -1,16 +1,16 @@
-# Subsurface cap is a flat plane, triangulated independently of knot surface levels
+# Secondary cap is a flat plane, triangulated independently of knot surface levels
 
-To render the area the Subsurface loop encloses, we needed to turn its points into an actual
-surface. An earlier attempt (`getSubSurfaceTriangles`, now deleted) reused the knot pipeline's own
+To render the area the Secondary loop encloses, we needed to turn its points into an actual
+surface. An earlier attempt (`getSecondaryTriangles`, now deleted) reused the knot pipeline's own
 surface-level machinery (`getSurfaceLevels` + `getKnotTriangles` from `surfaces.ts`/`diagram.ts`)
 and mapped each resulting triangle vertex back to that point's own real 3D height, producing a
 surface draped across whatever height each loop point already sat at. It was broken and unused —
-wired up (`getSubSurfaceIntersectionsLoop` stored its result on `SubSurface.surfaceTriangles`) but
+wired up (`getSecondaryIntersectionsLoop` stored its result on `Secondary.surfaceTriangles`) but
 never rendered (`KnotViewer.vue` always passed `showSurfaces={false}` for that loop).
 
 We rejected reusing that machinery going forward. It exists to resolve a *knot's own* over/under
-crossings into multiple disconnected surface levels; the Subsurface loop is already a single
-ordered closed loop by construction (`getSubSurfaceIntersectionsLoop`'s walk), so a plain Earcut
+crossings into multiple disconnected surface levels; the Secondary loop is already a single
+ordered closed loop by construction (`getSecondaryIntersectionsLoop`'s walk), so a plain Earcut
 fan over its points is the right fit, not the multi-level walk. We also rejected draping the
 surface across each point's real height, in favor of a genuinely flat cap: every point shares one
 height, one surface level above the highest level any knot currently occupies. Flattening the
@@ -27,7 +27,7 @@ without first seeing how often it actually happens.
 
 It happens every time a drawn 2D knot `Intersection` (`drawing.ts`) isn't also one of the loop's
 own crossing points. A drawn `Intersection` produces two `DiagramPoint`s at the same 2D location,
-one per knot, linked via `intersectionParallelId`. The subsurface walk only jumps between knots at
+one per knot, linked via `intersectionParallelId`. The secondary walk only jumps between knots at
 its own crossing points (`surfaceIntersection` - where the surfaces actually *pierce*); if the two
 knots at a drawn intersection don't pierce there, the walk has no reason to jump, and can visit
 both knots' copies of that same 2D location as separate ordinary loop points - which flatten to the
@@ -44,4 +44,4 @@ reattached by coordinate-matching, because nothing was ever regenerated from scr
 expected, ordinary behavior for a drawing with such intersections, not an error condition - no
 warning is logged for it.
 
-See `docs/specs/0002-subsurface-cap.md` for the concrete implementation plan.
+See `docs/specs/0002-secondary-cap.md` for the concrete implementation plan.

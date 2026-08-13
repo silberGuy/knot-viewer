@@ -36,46 +36,46 @@
 				/>
 			</label>
 
-			<label v-if="controlsStore.isSubSurfaceActive">
+			<label v-if="controlsStore.isSecondaryActive">
 				<input
 					type="checkbox"
-					id="toggle-subsurface-surface"
-					v-model="controlsStore.showSubSurfaceSurface"
+					id="toggle-secondary-surface"
+					v-model="controlsStore.showSecondarySurface"
 				/>
-				Show Subsurface
+				Show Secondary Surface
 			</label>
 
-			<label v-if="controlsStore.isSubSurfaceActive">
+			<label v-if="controlsStore.isSecondaryActive">
 				<input
 					type="checkbox"
-					id="toggle-subsurface-cap"
-					v-model="controlsStore.showSubSurfaceCap"
+					id="toggle-secondary-cap"
+					v-model="controlsStore.showSecondaryCap"
 				/>
-				Show Subsurface Cap
+				Show Secondary Surface Cap
 			</label>
 
-			<label v-if="controlsStore.isSubSurfaceActive">
+			<label v-if="controlsStore.isSecondaryActive">
 				<input
 					type="checkbox"
-					id="toggle-subsurface-intersections"
-					v-model="controlsStore.subsurfaceIntersections"
+					id="toggle-secondary-intersections"
+					v-model="controlsStore.secondaryIntersections"
 				/>
-				Show Subsurface Intersections
+				Show Secondary Surface Intersections
 			</label>
 
-			<label v-if="controlsStore.isSubSurfaceActive">
-				Subsurface Opacity
+			<label v-if="controlsStore.isSecondaryActive">
+				Secondary Surface Opacity
 				<input
 					type="range"
-					id="subsurface-surface-opacity"
+					id="secondary-surface-opacity"
 					min="0.2"
 					max="1"
 					step="0.01"
-					v-model.number="controlsStore.subSurfaceOpacity"
+					v-model.number="controlsStore.secondaryOpacity"
 				/>
 			</label>
 
-			<label v-if="controlsStore.isSubSurfaceActive">
+			<label v-if="controlsStore.isSecondaryActive">
 				Cap Shift
 				<input
 					type="range"

@@ -14,8 +14,8 @@
 import { computed } from "vue";
 import type {
 	CrossingWalkDirection,
-	SubSurfacesKnot,
-	SubSurfacesPoint,
+	SecondariesKnot,
+	SecondariesPoint,
 } from "./types.ts";
 import {
 	ALL_DIRECTIONS,
@@ -25,14 +25,14 @@ import {
 	getCrossingId,
 	getCrossingRole,
 	type CrossingWalkArrow,
-} from "../utils/sub-surfaces.ts";
+} from "../utils/secondary-surfaces.ts";
 
 const props = defineProps<{
 	arrow: CrossingWalkArrow;
 	// The walked loop's own points, and each knot's own point list (including injected
 	// crossing points) - used only to work out this crossing's arrival direction below.
-	walkPoints: SubSurfacesPoint[];
-	knots: SubSurfacesKnot[];
+	walkPoints: SecondariesPoint[];
+	knots: SecondariesKnot[];
 }>();
 
 const emit = defineEmits<{

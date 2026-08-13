@@ -1,39 +1,39 @@
-# Spec: Subsurface cap
+# Spec: Secondary cap
 
 Status: implemented.
-Decision record: [docs/adr/0004-subsurface-cap-flat-plane-independent-triangulation.md](../adr/0004-subsurface-cap-flat-plane-independent-triangulation.md).
-Glossary: see `CONTEXT.md`'s "Subsurface cap" entry.
+Decision record: [docs/adr/0004-secondary-cap-flat-plane-independent-triangulation.md](../adr/0004-secondary-cap-flat-plane-independent-triangulation.md).
+Glossary: see `CONTEXT.md`'s "Secondary cap" entry.
 
 ## Summary
 
-Render a flat, triangulated surface built from the Subsurface loop's own points, flattened to the
+Render a flat, triangulated surface built from the Secondary loop's own points, flattened to the
 x/z plane and lifted to one shared height above every knot's own surface. Rendered by a new
-component, `SubSurfaceCap.vue`, gated the same way the loop itself is (`isSubSurfaceActive`) plus
+component, `SecondaryCap.vue`, gated the same way the loop itself is (`isSecondaryActive`) plus
 its own toggle. This step only builds the flat cap from the loop's flattened footprint — it is
 *not* connected down to the loop's real points, which is future work and out of scope here.
 
 ## Remove the old, broken attempt first
 
-`getSubSurfaceTriangles` (`src/utils/sub-surfaces.ts:510-559`) reused the knot pipeline's
+`getSecondaryTriangles` (`src/utils/secondaries.ts:510-559`) reused the knot pipeline's
 multi-level surface machinery (`getSurfaceLevels` + `getKnotTriangles`) and draped the result
 across each point's own real height. It's wired up but never actually rendered
 (`KnotViewer.vue:19-24` always passes `showSurfaces={false}` for the loop's `KnotViewerKnot`), and
 per ADR 0004 it's being replaced, not extended.
 
-1. Delete `getSubSurfaceTriangles` entirely (`sub-surfaces.ts:510-559`).
-2. In `getSubSurfaceIntersectionsLoop` (`sub-surfaces.ts:370-395`), remove both
+1. Delete `getSecondaryTriangles` entirely (`secondaries.ts:510-559`).
+2. In `getSecondaryIntersectionsLoop` (`secondaries.ts:370-395`), remove both
    `surfaceTriangles: []` from the initial `result` object literal and the line
-   `result.surfaceTriangles = getSubSurfaceTriangles(result);`.
-3. In `src/components/types.ts`, narrow `SubSurface` (currently line 85: `export type SubSurface =
-   Omit<SubSurfacesKnot, 'diagramKnot'> & { id: string };`) to also omit `surfaceTriangles`:
+   `result.surfaceTriangles = getSecondaryTriangles(result);`.
+3. In `src/components/types.ts`, narrow `Secondary` (currently line 85: `export type Secondary =
+   Omit<SecondariesKnot, 'diagramKnot'> & { id: string };`) to also omit `surfaceTriangles`:
 
    ```ts
-   export type SubSurface = Omit<SubSurfacesKnot, 'diagramKnot' | 'surfaceTriangles'> & { id: string };
+   export type Secondary = Omit<SecondariesKnot, 'diagramKnot' | 'surfaceTriangles'> & { id: string };
    ```
 
 4. **Required follow-on fix**: `KnotViewerKnot.vue`'s `triangles3D` computed
    (`KnotViewerKnot.vue:61-71`) does `props.knot.surfaceTriangles.map(...)` where `props.knot: Knot3D
-   | SubSurfacesKnot | SubSurface`. Once `SubSurface` no longer has `surfaceTriangles`, this won't
+   | SecondariesKnot | Secondary`. Once `Secondary` no longer has `surfaceTriangles`, this won't
    type-check for that union member even though the early `if (!props.showSurfaces) return [];`
    guard means it's never actually reached at runtime for the loop's instance (which always passes
    `showSurfaces={false}`) — TS can't narrow `props.knot`'s type from `props.showSurfaces` being a
@@ -46,9 +46,9 @@ per ADR 0004 it's being replaced, not extended.
    });
    ```
 
-## New geometry functions (`src/utils/sub-surfaces.ts`)
+## New geometry functions (`src/utils/secondaries.ts`)
 
-Reuse `projectSubSurfacesPoint` (already exported) for the flatten step — it already does exactly
+Reuse `projectSecondariesPoint` (already exported) for the flatten step — it already does exactly
 "flatten this loop point to its x/z position," including the diagram-point-vs-crossing-point
 branch; no need for a second flatten function.
 
@@ -62,11 +62,11 @@ earlier detect-and-warn plan.
 
 ```ts
 // See ADR 0004: a drawn Intersection produces two DiagramPoints at the same 2D location, one per
-// knot, linked via intersectionParallelId. The subsurface walk only jumps knots at its own
+// knot, linked via intersectionParallelId. The secondary walk only jumps knots at its own
 // crossing points (surfaceIntersection); if the two knots at a drawn intersection don't pierce
 // there, the walk can visit both copies as separate ordinary points, which flatten to the same
 // (x, y). Finds the first such pair still in `points`, if any.
-function findDuplicateIntersectionPair(points: SubSurfacesPoint[]): [number, number] | undefined {
+function findDuplicateIntersectionPair(points: SecondariesPoint[]): [number, number] | undefined {
     for (let i = 0; i < points.length; i++) {
         const parallelId = points[i].diagramPoint?.intersectionParallelId;
         if (!parallelId) continue;
@@ -80,7 +80,7 @@ function findDuplicateIntersectionPair(points: SubSurfacesPoint[]): [number, num
 // - the only known source of the flattened footprint self-touching. Since both halves share one
 // flattened coordinate, no new points are inserted: the loop just splits into the two arcs
 // between them, each still closed through that shared coordinate. Recurses for more than one pair.
-function splitLoopAtDuplicateIntersections(points: SubSurfacesPoint[]): SubSurfacesPoint[][] {
+function splitLoopAtDuplicateIntersections(points: SecondariesPoint[]): SecondariesPoint[][] {
     const pair = findDuplicateIntersectionPair(points);
     if (!pair) return [points];
 
@@ -100,10 +100,10 @@ type CapTriangle = [[number, number, number], [number, number, number], [number,
 // the given surface level (8 * surfaceLevel, matching get3DPoint in diagram.ts). surfaceLevel
 // should be one past the highest level any knot currently occupies (see getSurfaceLevelsCount
 // below) so the cap always sits above every knot.
-export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number): CapTriangle[] {
+export function getSecondaryCapTriangles(loop: Secondary, surfaceLevel: number): CapTriangle[] {
     const height = 8 * surfaceLevel;
     return splitLoopAtDuplicateIntersections(loop.points).flatMap((subLoopPoints) => {
-        const flattened = subLoopPoints.map(projectSubSurfacesPoint);
+        const flattened = subLoopPoints.map(projectSecondariesPoint);
         if (flattened.length < 3) return [];
 
         const cut = Earcut.triangulate(flattened.flatMap((p) => [p.x, p.y]), [], 2);
@@ -121,9 +121,9 @@ export function getSubSurfaceCapTriangles(loop: SubSurface, surfaceLevel: number
 }
 ```
 
-Needs `import { Earcut } from "three/src/extras/Earcut.js";` added to `sub-surfaces.ts` (already
+Needs `import { Earcut } from "three/src/extras/Earcut.js";` added to `secondaries.ts` (already
 imported this way in `surfaces.ts`). No new type import needed - both new functions work directly
-on `SubSurfacesPoint`.
+on `SecondariesPoint`.
 
 ## Surface-level count (`src/utils/diagram.ts`)
 
@@ -140,7 +140,7 @@ export function getSurfaceLevelsCount(diagram: Diagram): number {
 (`minimizeSurfaceLevels` itself, `diagram.ts:184-195`, stays private - only the count is needed
 outside this file.)
 
-## New component: `src/components/SubSurfaceCap.vue`
+## New component: `src/components/SecondaryCap.vue`
 
 Computes its own triangles internally from props (per the chosen design - the component owns the
 calculation, not a triangle-list prop), following `KnotViewerKnot.vue`'s existing pattern of
@@ -159,16 +159,16 @@ looping `ViewerTriangle` over a computed triangle list:
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { SubSurface } from "./types";
-import { getSubSurfaceCapTriangles } from "../utils/sub-surfaces";
+import type { Secondary } from "./types";
+import { getSecondaryCapTriangles } from "../utils/secondaries";
 
 const props = defineProps<{
-	loop: SubSurface;
+	loop: Secondary;
 	surfaceLevel: number;
 	color?: string;
 }>();
 
-const triangles = computed(() => getSubSurfaceCapTriangles(props.loop, props.surfaceLevel));
+const triangles = computed(() => getSecondaryCapTriangles(props.loop, props.surfaceLevel));
 </script>
 ```
 
@@ -182,54 +182,54 @@ to obscure too much in practice.
 
 Add a toggle alongside the existing two, same `useToggle` pattern, defaulting to `true` (per the
 design discussion - unlike `showSurfacesIntersections`, which defaults `false` as a secondary debug
-view, the cap is the main payoff of the Subsurface tab):
+view, the cap is the main payoff of the Secondary tab):
 
 ```ts
-const [showSubSurfaceCap, toggleShowSubSurfaceCap] = useToggle(true);
+const [showSecondaryCap, toggleShowSecondaryCap] = useToggle(true);
 ```
 
-Return `showSubSurfaceCap`/`toggleShowSubSurfaceCap` alongside the others.
+Return `showSecondaryCap`/`toggleShowSecondaryCap` alongside the others.
 
 ## Wiring: `src/components/ViewerControls.vue`
 
-Add a checkbox, but - unlike the other two, which are always shown - only while the Subsurface tab
+Add a checkbox, but - unlike the other two, which are always shown - only while the Secondary tab
 is active:
 
 ```vue
-<label v-if="controlsStore.isSubSurfaceActive">
-	<input type="checkbox" id="toggle-subsurface-cap" v-model="controlsStore.showSubSurfaceCap" />
-	Show Subsurface Cap
+<label v-if="controlsStore.isSecondaryActive">
+	<input type="checkbox" id="toggle-secondary-cap" v-model="controlsStore.showSecondaryCap" />
+	Show Secondary Cap
 </label>
 ```
 
 ## Wiring: `src/components/KnotViewer.vue`
 
-1. Import `getSurfaceLevelsCount` from `../utils/diagram` and `SubSurfaceCap` from
-   `./SubSurfaceCap.vue`.
-2. Add a computed next to `subSurfaceLoop` (`KnotViewer.vue:145-150`):
+1. Import `getSurfaceLevelsCount` from `../utils/diagram` and `SecondaryCap` from
+   `./SecondaryCap.vue`.
+2. Add a computed next to `secondaryLoop` (`KnotViewer.vue:145-150`):
 
    ```ts
-   const subSurfaceCapLevel = computed(() => getSurfaceLevelsCount(diagram.value));
+   const secondaryCapLevel = computed(() => getSurfaceLevelsCount(diagram.value));
    ```
 
 3. In the template, next to the existing loop `KnotViewerKnot` (`KnotViewer.vue:19-24`), add:
 
    ```vue
-   <SubSurfaceCap
-   	v-if="controlsStore.isSubSurfaceActive && controlsStore.showSubSurfaceCap"
-   	:loop="subSurfaceLoop"
-   	:surfaceLevel="subSurfaceCapLevel"
-   	:key="subSurfaceLoop.id"
+   <SecondaryCap
+   	v-if="controlsStore.isSecondaryActive && controlsStore.showSecondaryCap"
+   	:loop="secondaryLoop"
+   	:surfaceLevel="secondaryCapLevel"
+   	:key="secondaryLoop.id"
    />
    ```
 
-No `extend({...})` registration needed (unlike `ViewerLine`) - `SubSurfaceCap` is a plain wrapper
+No `extend({...})` registration needed (unlike `ViewerLine`) - `SecondaryCap` is a plain wrapper
 component like `KnotViewerKnot`, not a custom Tres primitive.
 
 ## Docs already updated
 
-- `CONTEXT.md`: new "Subsurface cap" glossary entry.
-- `docs/adr/0004-subsurface-cap-flat-plane-independent-triangulation.md`: the flat-plane /
+- `CONTEXT.md`: new "Secondary cap" glossary entry.
+- `docs/adr/0004-secondary-cap-flat-plane-independent-triangulation.md`: the flat-plane /
   independent-triangulation decisions, and the duplicate-intersection split (superseding the
   original detect-and-warn plan once the actual self-touch cause was identified).
 
@@ -237,18 +237,18 @@ component like `KnotViewerKnot`, not a custom Tres primitive.
 
 No test suite exists in this repo (per `AGENTS.md`); validate manually via `yarn dev`:
 
-1. Draw two or more overlapping knots with at least one real crossing, switch to the Subsurface
+1. Draw two or more overlapping knots with at least one real crossing, switch to the Secondary
    tab, and confirm a flat, filled surface appears above the knots (not draped/warped to follow the
    loop's own height changes).
-2. Toggle "Show Subsurface Cap" off/on and confirm only the cap disappears/reappears - the loop's
+2. Toggle "Show Secondary Cap" off/on and confirm only the cap disappears/reappears - the loop's
    own outline (drawn by the existing `KnotViewerKnot` instance) must stay visible throughout.
 3. Switch back to the Drawing tab and confirm both the loop and its cap disappear, and that the
-   "Show Subsurface Cap" checkbox itself disappears from `ViewerControls`.
+   "Show Secondary Cap" checkbox itself disappears from `ViewerControls`.
 4. Construct a drawing with a drawn `Intersection` between two knots that don't actually pierce
    surfaces there (so the loop ends up containing both halves as ordinary points) and confirm the
    cap still renders as multiple correctly-shaped simple surfaces instead of one self-touching one
    - this is the case `findDuplicateIntersectionPair`/`splitLoopAtDuplicateIntersections` exist for.
 5. Add/remove a crossing (changing the number of surface levels) and confirm the cap's height
-   moves to stay above the new highest knot surface level, via `subSurfaceCapLevel`.
-6. `yarn build` (runs `vue-tsc -b`) to confirm the `SubSurface` type change doesn't leave any other
+   moves to stay above the new highest knot surface level, via `secondaryCapLevel`.
+6. `yarn build` (runs `vue-tsc -b`) to confirm the `Secondary` type change doesn't leave any other
    stale `surfaceTriangles` references beyond the one fixed in `KnotViewerKnot.vue`.

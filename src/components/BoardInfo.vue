@@ -14,14 +14,13 @@
 				</div>
 				<div v-else>
 					<p>
-						Click an <span class="key">arrow</span> to control the Subsurface
+						Click an <span class="key">arrow</span> to control the Secondary
 						loop's direction. Click a <span class="key">point</span> to force
-						the Subsurface loop through it.
+						the Secondary loop through it.
 					</p>
 				</div>
 			</div>
 		</div>
-
 		<button
 			class="board-info-button"
 			:class="{ disabled: !canSave }"
@@ -45,7 +44,7 @@ import { computed, ref } from "vue";
 import type { CrossingWalkDirection } from "./types";
 import { useControlsStore } from "../data/controls";
 import { useDrawingStore } from "../data/drawing";
-import { useSubsurfaceWalkStore } from "../data/subsurface-walk";
+import { useSecondaryWalkStore } from "../data/secondary-walk";
 
 const emit = defineEmits<{
 	(e: "rerender"): void;
@@ -55,7 +54,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 
 const controlsStore = useControlsStore();
 const drawingStore = useDrawingStore();
-const subsurfaceWalkStore = useSubsurfaceWalkStore();
+const secondaryWalkStore = useSecondaryWalkStore();
 
 const canSave = computed(() => {
 	const points = drawingStore.knots.map((knot) => knot.points).flat();
@@ -68,9 +67,9 @@ function saveToFile() {
 		...drawingStore.getDrawingData(),
 		interFlipIds: Array.from(drawingStore.interFlipIds || []),
 		crossingWalkDirections: Array.from(
-			subsurfaceWalkStore.crossingWalkDirections,
+			secondaryWalkStore.crossingWalkDirections,
 		),
-		selectedStartPointId: subsurfaceWalkStore.selectedStartPointId,
+		selectedStartPointId: secondaryWalkStore.selectedStartPointId,
 	};
 	const dataStr =
 		"data:text/json;charset=utf-8," +
@@ -96,7 +95,7 @@ function loadFromFile(event: Event) {
 				json.interFlipIds = new Set<string>(json.interFlipIds);
 			}
 			drawingStore.setDrawingData(json);
-			subsurfaceWalkStore.restore(
+			secondaryWalkStore.restore(
 				Array.isArray(json.crossingWalkDirections)
 					? new Map<string, CrossingWalkDirection>(json.crossingWalkDirections)
 					: new Map(),

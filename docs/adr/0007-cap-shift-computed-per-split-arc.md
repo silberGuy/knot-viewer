@@ -13,7 +13,7 @@ Fix: after shifting, find where the shifted boundary's own edges actually inters
 purely geometric check (any two non-adjacent edges, including merely touching at an endpoint, not
 just crossing through each other) - and insert *that* point to close each resulting simple
 sub-boundary, instead of reusing an existing loop point. This is cap-only
-(`getSubSurfaceCapTriangles`); the wall (ADR 0005) keeps walking the raw loop via each point's own
+(`getSecondaryCapTriangles`); the wall (ADR 0005) keeps walking the raw loop via each point's own
 shifted position, never aware of the inserted point.
 
 This supersedes ADR 0004's rationale for the cap specifically: it rejected a general

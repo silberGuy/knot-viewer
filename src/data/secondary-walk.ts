@@ -1,12 +1,12 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia'
 import type { CrossingWalkDirection, CrossingWalkDirections, Knot3D } from '../components/types';
-import { getDefaultCrossingWalkDirections } from '../utils/sub-surfaces';
+import { getDefaultCrossingWalkDirections } from '../utils/secondary-surfaces';
 
 // Holds the user's crossingWalkDirection overrides and selected walk-start point for the
-// Subsurface board. These persist across tab switches and round-trip through Save/Load
+// Secondary board. These persist across tab switches and round-trip through Save/Load
 // (see BoardInfo.vue) - no longer reset just for revisiting the tab.
-export const useSubsurfaceWalkStore = defineStore('subsurfaceWalk', () => {
+export const useSecondaryWalkStore = defineStore('secondaryWalk', () => {
     const crossingWalkDirections = ref<CrossingWalkDirections>(new Map());
     const selectedStartPointId = ref<string | undefined>(undefined);
 

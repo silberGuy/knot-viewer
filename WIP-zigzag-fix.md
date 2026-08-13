@@ -1,4 +1,4 @@
-# WIP: subsurface cap zigzag fix (not final — delete once ADR/spec written)
+# WIP: secondary cap zigzag fix (not final — delete once ADR/spec written)
 
 ## Status: implemented, partially working. Resume here tomorrow.
 One zigzag cluster now nudges apart correctly. At least one other does not yet. Root cause of the
@@ -20,7 +20,7 @@ A third, genuinely different-but-nearby Crossing point is often also present in 
 (CONTEXT.md's "second, nearby crossing point... not at the 2D intersection at all") - that one is
 correctly left untouched, only the exactly-coincident pair gets nudged.
 
-## Implementation (`src/utils/sub-surfaces.ts`)
+## Implementation (`src/utils/secondaries.ts`)
 - `ZIGZAG_MATCH_EPSILON = 0.01` - coordinate-coincidence threshold for finding the pair.
 - `ZIGZAG_NUDGE_DISTANCE` - currently `40` for visual testing; dial back down (original plan was `1`)
   once fully confirmed working.
@@ -52,10 +52,10 @@ correctly left untouched, only the exactly-coincident pair gets nudged.
    point coincide" detail explicitly.
 
 ## Relevant files
-- `src/utils/sub-surfaces.ts` - `nudgeZigzagBoundary` and helpers, `getShiftedCapBoundary`.
+- `src/utils/secondaries.ts` - `nudgeZigzagBoundary` and helpers, `getShiftedCapBoundary`.
 - `src/utils/surfaces.ts` - `getIntersectionsNotInKnotTriangles` (bridging triangle / far-edge crossing
   source).
 - `src/utils/drawing.ts` - `intersectionParallelId`/`Intersection` (turned out less central to the fix
   than first assumed, but still relevant background).
-- CONTEXT.md - "Zigzag", "Crossing point", "Subsurface cap", "Subsurface wall", "Cap shift".
+- CONTEXT.md - "Zigzag", "Crossing point", "Secondary cap", "Secondary wall", "Cap shift".
 - ADR 0004, 0005, 0007 - precedent for cap-only / wall-only / shift-only geometric fixes.

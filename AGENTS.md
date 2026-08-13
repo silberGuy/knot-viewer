@@ -40,7 +40,7 @@ own point/knot/triangle types in [src/components/types.ts](src/components/types.
    as-is in 3D** — 3D-ness is just a height (y value) bolted onto 2D
    triangles, not a separate triangulation pass.
 
-There is also a `src/utils/sub-surfaces.ts` module that builds on top of
+There is also a `src/utils/secondaries.ts` module that builds on top of
 `Knot3D`s (intersections between different knots' 3D surfaces). It's
 under active development and still being figured out, so it's
 deliberately left out of this doc for now — read the file directly if

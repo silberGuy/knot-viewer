@@ -1,6 +1,6 @@
 import { Ray, Vector3 } from "three";
 import { Earcut } from "three/src/extras/Earcut.js";
-import type { Coords2D, CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SubsurfaceLoop, SubSurfaceTriangle, SubSurfacesKnot, SubSurfacesPoint, Triangle3D } from "../components/types";
+import type { Coords2D, CrossingWalkDirection, CrossingWalkDirections, Knot3D, Point3D, SecondaryLoop, SecondaryTriangle, SecondariesKnot, SecondariesPoint, Triangle3D } from "../components/types";
 import { isClosingPoint } from "./drawing";
 
 function arePointsClose(a: { coords: [number, number, number] }, b: { coords: [number, number, number] }, epsilon = 0.01) {
@@ -34,7 +34,7 @@ const PARALLEL_EPSILON = Math.sin(0.1 * Math.PI / 180);
 // 0008) - getTriangleLineIntersection below is the Point3D/Triangle3D-typed wrapper other code
 // here needs for knot-walk bookkeeping.
 function getRawTriangleLineIntersection(
-    triangle: SubSurfaceTriangle,
+    triangle: SecondaryTriangle,
     p1: [number, number, number],
     p2: [number, number, number],
 ): [number, number, number] | null {
@@ -59,12 +59,12 @@ function getRawTriangleLineIntersection(
 }
 
 function getTriangleLineIntersection(triangle: Triangle3D, line: [Point3D, Point3D]) {
-    const triangleCoords = triangle.points.map((p) => p.coords) as SubSurfaceTriangle;
+    const triangleCoords = triangle.points.map((p) => p.coords) as SecondaryTriangle;
     return getRawTriangleLineIntersection(triangleCoords, line[0].coords, line[1].coords);
 }
 
-function deduplicatePoints(points: SubSurfacesPoint[], epsilon = 0.01) {
-    const unique: SubSurfacesPoint[] = [];
+function deduplicatePoints(points: SecondariesPoint[], epsilon = 0.01) {
+    const unique: SecondariesPoint[] = [];
 
     for (const p of points) {
         const v = new Vector3(...p.coords);
@@ -83,8 +83,8 @@ function getPointsIndexesDistanceInKnot(pointA: Point3D, pointB: Point3D, knot: 
     return (indexA - indexB) % knot.points.length;
 }
 
-function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: Triangle3D, knots: Knot3D[]): SubSurfacesPoint[] {
-    const intersections: SubSurfacesPoint[] = [];
+function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: Triangle3D, knots: Knot3D[]): SecondariesPoint[] {
+    const intersections: SecondariesPoint[] = [];
 
     const edges1 = [
         [triangle1.points[0], triangle1.points[1]],
@@ -102,7 +102,7 @@ function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: T
         if (intersection) {
             const sortedByKnotPoints = [p1, p2].sort((a, b) => getPointsIndexesDistanceInKnot(a, b, triangle1Knot!));
             const newPoint = {
-                id: `subsurface-inter-${p1.diagramPoint.id}-${p2.diagramPoint.id}-${triangle2.id}`,
+                id: `secondary-inter-${p1.diagramPoint.id}-${p2.diagramPoint.id}-${triangle2.id}`,
                 surfaceIntersection: {
                     triangle: triangle1,
                     otherTriangle: triangle2,
@@ -119,7 +119,7 @@ function getTrianglesIntersectionsAsymmetric(triangle1: Triangle3D, triangle2: T
     return deduplicatePoints(intersections);
 }
 
-function getTrianglesIntersections(triangle1: Triangle3D, triangle2: Triangle3D, knots: Knot3D[]): SubSurfacesPoint[] {
+function getTrianglesIntersections(triangle1: Triangle3D, triangle2: Triangle3D, knots: Knot3D[]): SecondariesPoint[] {
     const points1 = getTrianglesIntersectionsAsymmetric(triangle1, triangle2, knots);
     const points2 = getTrianglesIntersectionsAsymmetric(triangle2, triangle1, knots);
     const points = [...points1, ...points2];
@@ -138,8 +138,8 @@ function getTrianglesIntersections(triangle1: Triangle3D, triangle2: Triangle3D,
     return points;
 }
 
-function injectSubSurfaceIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SubSurfacesPoint[]): SubSurfacesKnot {
-    const resultPoints: SubSurfacesPoint[] = [];
+function injectSecondaryIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SecondariesPoint[]): SecondariesKnot {
+    const resultPoints: SecondariesPoint[] = [];
     const knotIntersections = pointsToAdd.filter(p => {
         return p.surfaceIntersection?.triangle.knotId === knot.diagramKnot.id;
     });
@@ -172,8 +172,8 @@ function injectSubSurfaceIntersectionsIntoKnot(knot: Knot3D, pointsToAdd: SubSur
     };
 }
 
-export function getKnotsSurfacesIntersections(knots: Knot3D[]): SubSurfacesPoint[] {
-    const intersections = new Set<SubSurfacesPoint>();
+export function getKnotsSurfacesIntersections(knots: Knot3D[]): SecondariesPoint[] {
+    const intersections = new Set<SecondariesPoint>();
 
     const allTriangles = knots.map(k => k.surfaceTriangles).flat();
 
@@ -214,15 +214,15 @@ export function getKnotsSurfacesIntersections(knots: Knot3D[]): SubSurfacesPoint
     return Array.from(intersections);
 }
 
-export function combineKnotsWithSurfaceIntersections(knots: Knot3D[]): SubSurfacesKnot[] {
+export function combineKnotsWithSurfaceIntersections(knots: Knot3D[]): SecondariesKnot[] {
     const pointsToAdd = getKnotsSurfacesIntersections(knots);
-    const knotsWithSubSurfacePoints = knots.map(knot => injectSubSurfaceIntersectionsIntoKnot(knot, pointsToAdd));
-    return knotsWithSubSurfacePoints;
+    const knotsWithSecondaryPoints = knots.map(knot => injectSecondaryIntersectionsIntoKnot(knot, pointsToAdd));
+    return knotsWithSecondaryPoints;
 }
 
 // Order-independent id for a crossing (same for both of its points) - used to key
 // CrossingWalkDirections by crossing, not by point.
-export function getCrossingId(point: SubSurfacesPoint): string | undefined {
+export function getCrossingId(point: SecondariesPoint): string | undefined {
     const twinPointId = point.surfaceIntersection?.twinPointId;
     if (!twinPointId) return undefined;
     return [point.id, twinPointId].sort().join("::");
@@ -230,9 +230,9 @@ export function getCrossingId(point: SubSurfacesPoint): string | undefined {
 
 // Seeds every crossing with DEFAULT_CROSSING_WALK_DIRECTION.
 export function getDefaultCrossingWalkDirections(knots: Knot3D[]): CrossingWalkDirections {
-    const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
+    const knotsWithSecondaryPoints = combineKnotsWithSurfaceIntersections(knots);
     const directions: CrossingWalkDirections = new Map();
-    for (const knot of knotsWithSubSurfacePoints) {
+    for (const knot of knotsWithSecondaryPoints) {
         for (const point of knot.points) {
             const crossingId = getCrossingId(point);
             if (crossingId && !directions.has(crossingId)) {
@@ -273,13 +273,13 @@ const DEFAULT_CROSSING_WALK_DIRECTION: CrossingWalkDirection = "upperForward";
 // one state - right after landing on a twin - so that landing point doesn't re-resolve the
 // same crossing and jump straight back where it came from.
 type WalkState = {
-    knot: SubSurfacesKnot;
+    knot: SecondariesKnot;
     pointIndex: number;
     step: 1 | -1;
     justArrivedViaJump: boolean;
 };
 
-function currentPoint(state: WalkState): SubSurfacesPoint {
+function currentPoint(state: WalkState): SecondariesPoint {
     return state.knot.points[state.pointIndex];
 }
 
@@ -288,7 +288,7 @@ function currentPoint(state: WalkState): SubSurfacesPoint {
 // knot not found) - the caller treats that as "stop".
 function advance(
     state: WalkState,
-    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    knotsWithSecondaryPoints: SecondariesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
 ): WalkState | undefined {
     const point = currentPoint(state);
@@ -315,7 +315,7 @@ function advance(
     }
 
     const twinPointId = point.surfaceIntersection!.twinPointId!;
-    const twinKnot = knotsWithSubSurfacePoints.find(k => k.points.some(p => p.id === twinPointId));
+    const twinKnot = knotsWithSecondaryPoints.find(k => k.points.some(p => p.id === twinPointId));
     if (!twinKnot) {
         console.error('Could not find twin knot for point', point);
         return undefined;
@@ -326,13 +326,13 @@ function advance(
 
 // Walks from `start` until it revisits a point or the data runs out. isClosed is true only if
 // the point it revisits is its own start point - not just any already-visited point (see
-// CONTEXT.md's "Subsurface loop").
+// CONTEXT.md's "Secondary loop").
 function runWalk(
     start: WalkState,
-    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    knotsWithSecondaryPoints: SecondariesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
-): { points: SubSurfacesPoint[]; isClosed: boolean } {
-    const points: SubSurfacesPoint[] = [];
+): { points: SecondariesPoint[]; isClosed: boolean } {
+    const points: SecondariesPoint[] = [];
     const visitedIds = new Set<string>();
 
     let state: WalkState | undefined = start;
@@ -343,33 +343,33 @@ function runWalk(
         }
         points.push(point);
         visitedIds.add(point.id);
-        state = advance(state, knotsWithSubSurfacePoints, crossingWalkDirections);
+        state = advance(state, knotsWithSecondaryPoints, crossingWalkDirections);
     }
 
     return { points, isClosed: false };
 }
 
 // Starting point is never user-facing (a closed loop has no beginning) *unless* the user
-// explicitly picked one by clicking a point on the Subsurface board (selectedStartPointId,
+// explicitly picked one by clicking a point on the Secondary board (selectedStartPointId,
 // found forward from - see "Going forward on a knot"). Absent that, any crossing works as an
 // anchor - the lowest crossing id, for a stable result. Starts on whichever of the anchor's
 // two points (see getCrossingRole) its own resolved direction targets - a fixed choice, not
 // "whichever knot happens to be found first" (see ADR 0003). Falls back to a fixed first
 // point when there are no crossings to anchor on either.
 function getWalkStart(
-    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    knotsWithSecondaryPoints: SecondariesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
     selectedStartPointId?: string,
 ): WalkState {
     if (selectedStartPointId) {
-        for (const knot of knotsWithSubSurfacePoints) {
+        for (const knot of knotsWithSecondaryPoints) {
             const pointIndex = knot.points.findIndex(p => p.id === selectedStartPointId);
             if (pointIndex !== -1) return { knot, pointIndex, step: 1, justArrivedViaJump: false };
         }
     }
 
     const crossingIds = new Set<string>();
-    for (const knot of knotsWithSubSurfacePoints) {
+    for (const knot of knotsWithSecondaryPoints) {
         for (const point of knot.points) {
             const crossingId = getCrossingId(point);
             if (crossingId) crossingIds.add(crossingId);
@@ -382,7 +382,7 @@ function getWalkStart(
         const step = directionToStep(direction);
         const targetRole = directionToRole(direction);
 
-        for (const knot of knotsWithSubSurfacePoints) {
+        for (const knot of knotsWithSecondaryPoints) {
             const pointIndex = knot.points.findIndex(
                 p => getCrossingId(p) === anchorId && getCrossingRole(p) === targetRole,
             );
@@ -391,24 +391,24 @@ function getWalkStart(
         }
     }
 
-    return { knot: knotsWithSubSurfacePoints[0], pointIndex: 0, step: 1, justArrivedViaJump: false };
+    return { knot: knotsWithSecondaryPoints[0], pointIndex: 0, step: 1, justArrivedViaJump: false };
 }
 
-export function getSubSurfaceIntersectionsLoop(
+export function getSecondaryIntersectionsLoop(
     knots: Knot3D[],
     crossingWalkDirections: CrossingWalkDirections = new Map(),
     selectedStartPointId?: string,
-): SubsurfaceLoop {
+): SecondaryLoop {
     if (knots.length === 0) {
-        return { id: 'sub-surface-empty', points: [], isClosed: true };
+        return { id: 'secondary-empty', points: [], isClosed: true };
     }
 
-    const knotsWithSubSurfacePoints = combineKnotsWithSurfaceIntersections(knots);
-    const start = getWalkStart(knotsWithSubSurfacePoints, crossingWalkDirections, selectedStartPointId);
-    const { points: walkedPoints, isClosed } = runWalk(start, knotsWithSubSurfacePoints, crossingWalkDirections);
+    const knotsWithSecondaryPoints = combineKnotsWithSurfaceIntersections(knots);
+    const start = getWalkStart(knotsWithSecondaryPoints, crossingWalkDirections, selectedStartPointId);
+    const { points: walkedPoints, isClosed } = runWalk(start, knotsWithSecondaryPoints, crossingWalkDirections);
 
     return {
-        id: `sub-surface-${knots.map(k => k.diagramKnot.id).join('_')}`,
+        id: `secondary-${knots.map(k => k.diagramKnot.id).join('_')}`,
         isClosed,
         // Nudged slightly off of the knots' own lines so the overlay doesn't sit exactly
         // on top of them.
@@ -421,7 +421,7 @@ export function getSubSurfaceIntersectionsLoop(
 
 // Diagram points keep their 2D position; crossing points project from 3D (x/z -> x/y,
 // mirroring get3DKnots in diagram.ts).
-export function projectSubSurfacesPoint(point: SubSurfacesPoint): { x: number; y: number } {
+export function projectSecondariesPoint(point: SecondariesPoint): { x: number; y: number } {
     return point.diagramPoint
         ? { x: point.diagramPoint.x, y: point.diagramPoint.y }
         : { x: point.coords[0], y: point.coords[2] };
@@ -446,7 +446,7 @@ export const ALL_DIRECTIONS: CrossingWalkDirection[] = ["lowerForward", "lowerBa
 // The real 2D Intersection this crossing's edge touches, if any - some crossings come from
 // a bridging triangle's far edge instead (see CONTEXT.md's "Crossing point") and have none.
 // isWithinKnot excluded: that's a knot's own self-crossing, not a between-knot one.
-function findRealIntersection(surfaceIntersection: NonNullable<SubSurfacesPoint["surfaceIntersection"]>) {
+function findRealIntersection(surfaceIntersection: NonNullable<SecondariesPoint["surfaceIntersection"]>) {
     const fromP1 = surfaceIntersection.lineP1.diagramPoint.intersection;
     if (fromP1 && !fromP1.isWithinKnot) return fromP1;
     const fromP2 = surfaceIntersection.lineP2.diagramPoint.intersection;
@@ -457,7 +457,7 @@ function findRealIntersection(surfaceIntersection: NonNullable<SubSurfacesPoint[
 // A crossing point's fixed lower/upper side, independent of walk position (see ADR 0003).
 // Reuses the drawn over/under (topLineKnotId/bottomLineKnotId) at a real intersection;
 // otherwise falls back to a fixed id tie-break (no user-facing arrow there anyway).
-export function getCrossingRole(point: SubSurfacesPoint): "lower" | "upper" | undefined {
+export function getCrossingRole(point: SecondariesPoint): "lower" | "upper" | undefined {
     const surfaceIntersection = point.surfaceIntersection;
     const twinPointId = surfaceIntersection?.twinPointId;
     if (!surfaceIntersection || !twinPointId) return undefined;
@@ -475,18 +475,18 @@ export function getCrossingRole(point: SubSurfacesPoint): "lower" | "upper" | un
 // ones the currently displayed loop happens to pass through (CrossingWalkArrow.vue tells the
 // two apart via its own walkPoints lookup, and styles off-loop ones differently) - positioned
 // at that intersection's own point (fixed, unlike either of the crossing's two
-// SubSurfacesPoints), and carrying that intersection's own topLine/bottomLine geometry -
+// SecondariesPoints), and carrying that intersection's own topLine/bottomLine geometry -
 // CrossingWalkArrow.vue derives the arrival direction (see CONTEXT.md), which options to
 // exclude, and the facing angle from these directly. Crossings not at a real intersection
 // still resolve (via their default) but get no arrow.
 export function getCrossingWalkArrows(
-    knotsWithSubSurfacePoints: SubSurfacesKnot[],
+    knotsWithSecondaryPoints: SecondariesKnot[],
     crossingWalkDirections: CrossingWalkDirections,
 ): CrossingWalkArrow[] {
     const arrows: CrossingWalkArrow[] = [];
     const seenCrossingIds = new Set<string>();
 
-    for (const knot of knotsWithSubSurfacePoints) {
+    for (const knot of knotsWithSecondaryPoints) {
         for (const point of knot.points) {
             const crossingId = getCrossingId(point);
             if (!crossingId || seenCrossingIds.has(crossingId)) continue;
@@ -513,8 +513,8 @@ export function getCrossingWalkArrows(
     return arrows;
 }
 
-export function getSurfaceIntersectionsPairs(intersections: SubSurfacesPoint[]): [SubSurfacesPoint, SubSurfacesPoint][] {
-    const pairs: [SubSurfacesPoint, SubSurfacesPoint][] = [];
+export function getSurfaceIntersectionsPairs(intersections: SecondariesPoint[]): [SecondariesPoint, SecondariesPoint][] {
+    const pairs: [SecondariesPoint, SecondariesPoint][] = [];
     const visitedIds = new Set<string>();
 
     for (const point of intersections) {
@@ -576,7 +576,7 @@ function splitSelfIntersectingBoundary(boundary: Coords2D[]): Coords2D[][] {
     ];
 }
 
-// Right-hand normal of `from -> to`, in this plane's own coordinates (see projectSubSurfacesPoint).
+// Right-hand normal of `from -> to`, in this plane's own coordinates (see projectSecondariesPoint).
 function getRightNormal(from: Coords2D, to: Coords2D): Coords2D {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
@@ -616,7 +616,7 @@ function shiftCapPoint(prev: Coords2D, curr: Coords2D, next: Coords2D, distance:
 // A knot's own closing point (drawing.ts's isClosingPoint) always duplicates that knot's first
 // point in this walk, coincident with it - not a genuine extra corner - so cap/wall geometry
 // drops it rather than treating it as a second corner right on top of the first.
-function getCapLoopPoints(loop: SubsurfaceLoop): SubSurfacesPoint[] {
+function getCapLoopPoints(loop: SecondaryLoop): SecondariesPoint[] {
     return loop.points.filter((point) => !isClosingPoint(point));
 }
 
@@ -635,7 +635,7 @@ function coordsDistance(a: Coords2D, b: Coords2D): number {
 // ("outward" - the nudge direction) and whichever is itself a Crossing point, i.e. part of the
 // short run between the ordinary Intersection point and the Crossing point coincident with it
 // ("cluster").
-function getZigzagNeighbors(points: SubSurfacesPoint[], index: number) {
+function getZigzagNeighbors(points: SecondariesPoint[], index: number) {
     const n = points.length;
     const nextIndex = (index + 1) % n;
     const prevIndex = (index - 1 + n) % n;
@@ -656,7 +656,7 @@ function normalize(v: Coords2D): Coords2D {
 // cap shift, which then treats the result as ordinary input. Skips within-knot self-crossings (a
 // Zigzag only happens between two different knots) and plain un-pierced duplicates (ADR 0004 - no
 // Crossing point to find there, so this simply won't match).
-function nudgeZigzagBoundary(points: SubSurfacesPoint[], flattened: Coords2D[]): Coords2D[] {
+function nudgeZigzagBoundary(points: SecondariesPoint[], flattened: Coords2D[]): Coords2D[] {
     const nudged = [...flattened];
 
     for (let i = 0; i < points.length; i++) {
@@ -689,14 +689,14 @@ function nudgeZigzagBoundary(points: SubSurfacesPoint[], flattened: Coords2D[]):
 }
 
 // The cap's boundary shifted by `distance` (CONTEXT.md's "Cap shift"), keyed by point id so both
-// getSubSurfaceCapTriangles and getSubSurfaceWallTriangles (both walking the raw loop) can look up
+// getSecondaryCapTriangles and getSecondaryWallTriangles (both walking the raw loop) can look up
 // their own points' shifted position - each point using its own real (raw loop) neighbors. Any
-// self-touching this produces or resolves is handled separately, by getSubSurfaceCapTriangles
+// self-touching this produces or resolves is handled separately, by getSecondaryCapTriangles
 // alone (ADR 0007) - shifting itself doesn't need to know about it. Zigzags (CONTEXT.md) are
 // separated first (nudgeZigzagBoundary), before shifting ever sees the boundary.
-export function getShiftedCapBoundary(loop: SubsurfaceLoop, distance: number): Map<string, Coords2D> {
+export function getShiftedCapBoundary(loop: SecondaryLoop, distance: number): Map<string, Coords2D> {
     const points = getCapLoopPoints(loop);
-    const flattened = nudgeZigzagBoundary(points, points.map(projectSubSurfacesPoint));
+    const flattened = nudgeZigzagBoundary(points, points.map(projectSecondariesPoint));
     const shifted = new Map<string, Coords2D>();
     for (let i = 0; i < points.length; i++) {
         if (points.length < 3) {
@@ -716,14 +716,14 @@ export function getShiftedCapBoundary(loop: SubsurfaceLoop, distance: number): M
 // surface level (surfaceLevelHeight * surfaceLevel, same surfaceLevelHeight get3DPoint in
 // diagram.ts uses). surfaceLevel should be one past the highest level any knot currently occupies
 // (see getSurfaceLevelsCount in diagram.ts) so the cap always sits above every knot.
-export function getSubSurfaceCapTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): SubSurfaceTriangle[] {
+export function getSecondaryCapTriangles(loop: SecondaryLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): SecondaryTriangle[] {
     const height = surfaceLevelHeight * surfaceLevel;
     const boundary = getCapLoopPoints(loop).map((point) => shiftedBoundary.get(point.id)!);
     return splitSelfIntersectingBoundary(boundary).flatMap((subBoundary) => {
         if (subBoundary.length < 3) return [];
 
         const cut = Earcut.triangulate(subBoundary.flatMap((p) => [p.x, p.y]), [], 2);
-        const triangles: SubSurfaceTriangle[] = [];
+        const triangles: SecondaryTriangle[] = [];
         for (let i = 0; i < cut.length; i += 3) {
             const [a, b, c] = cut.slice(i, i + 3);
             triangles.push([
@@ -736,7 +736,7 @@ export function getSubSurfaceCapTriangles(loop: SubsurfaceLoop, surfaceLevel: nu
     });
 }
 
-function getRawTrianglesIntersectionAsymmetric(triangleA: SubSurfaceTriangle, triangleB: SubSurfaceTriangle): [number, number, number][] {
+function getRawTrianglesIntersectionAsymmetric(triangleA: SecondaryTriangle, triangleB: SecondaryTriangle): [number, number, number][] {
     const edges: [[number, number, number], [number, number, number]][] = [
         [triangleA[0], triangleA[1]],
         [triangleA[1], triangleA[2]],
@@ -750,9 +750,9 @@ function getRawTrianglesIntersectionAsymmetric(triangleA: SubSurfaceTriangle, tr
 // A pair of triangles from any two triangle soups generally intersects along one segment (both
 // triangles being convex and planar) - this returns that segment, or null if they don't cross.
 // Deliberately generic over bare coordinates (see ADR 0008) so it isn't tied to knots, the wall,
-// or any other specific surface - the cap could use this too once more than one Subsurface
+// or any other specific surface - the cap could use this too once more than one Secondary
 // surface exists to test it against.
-function getTrianglesIntersectionSegment(triangleA: SubSurfaceTriangle, triangleB: SubSurfaceTriangle): [[number, number, number], [number, number, number]] | null {
+function getTrianglesIntersectionSegment(triangleA: SecondaryTriangle, triangleB: SecondaryTriangle): [[number, number, number], [number, number, number]] | null {
     const points = [
         ...getRawTrianglesIntersectionAsymmetric(triangleA, triangleB),
         ...getRawTrianglesIntersectionAsymmetric(triangleB, triangleA),
@@ -764,9 +764,9 @@ function getTrianglesIntersectionSegment(triangleA: SubSurfaceTriangle, triangle
 
 // One wall rectangle (as its two triangles) plus the loop edge it's built on - loopA/loopB are
 // exactly the bottom edge shared by both triangles, kept alongside them for
-// getSubSurfaceWallIntersections below, which needs that edge to recognize its own degenerate hits.
+// getSecondaryWallIntersections below, which needs that edge to recognize its own degenerate hits.
 type WallSegment = {
-    triangles: [SubSurfaceTriangle, SubSurfaceTriangle];
+    triangles: [SecondaryTriangle, SecondaryTriangle];
     loopA: [number, number, number];
     loopB: [number, number, number];
 };
@@ -777,7 +777,7 @@ type WallSegment = {
 // - that split exists only so Earcut gets a simple polygon; a wall rectangle is local to one pair
 // of points and has no such requirement. Top edge uses the same shiftedBoundary as the cap; bottom
 // edge (real coords) is never shifted.
-function getSubSurfaceWallSegments(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): WallSegment[] {
+function getSecondaryWallSegments(loop: SecondaryLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): WallSegment[] {
     const height = surfaceLevelHeight * surfaceLevel;
     const points = getCapLoopPoints(loop);
     if (points.length < 3) return [];
@@ -797,24 +797,24 @@ function getSubSurfaceWallSegments(loop: SubsurfaceLoop, surfaceLevel: number, s
     return segments;
 }
 
-export function getSubSurfaceWallTriangles(loop: SubsurfaceLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): SubSurfaceTriangle[] {
-    return getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary, surfaceLevelHeight).flatMap((segment) => segment.triangles);
+export function getSecondaryWallTriangles(loop: SecondaryLoop, surfaceLevel: number, shiftedBoundary: Map<string, Coords2D>, surfaceLevelHeight: number): SecondaryTriangle[] {
+    return getSecondaryWallSegments(loop, surfaceLevel, shiftedBoundary, surfaceLevelHeight).flatMap((segment) => segment.triangles);
 }
 
 // Wall triangles vs a target triangle soup (typically one knot's surfaceTriangles), skipping hits
-// that just retrace a wall segment's own bottom edge (CONTEXT.md's "Subsurface intersection").
+// that just retrace a wall segment's own bottom edge (CONTEXT.md's "Secondary intersection").
 // That edge is guaranteed to coincide with a real knot edge - either directly (an ordinary,
 // non-crossing loop segment IS two adjacent points of one knot's own diagram) or via a crossing
 // point (interpolated exactly onto another knot's surface) - so any result confined to that edge
 // is the wall meeting its own origin, not a real piercing through a surface's interior.
-export function getSubSurfaceWallIntersections(
-    loop: SubsurfaceLoop,
+export function getSecondaryWallIntersections(
+    loop: SecondaryLoop,
     surfaceLevel: number,
     shiftedBoundary: Map<string, Coords2D>,
-    targetTriangles: SubSurfaceTriangle[],
+    targetTriangles: SecondaryTriangle[],
     surfaceLevelHeight: number,
 ): [[number, number, number], [number, number, number]][] {
-    const wallSegments = getSubSurfaceWallSegments(loop, surfaceLevel, shiftedBoundary, surfaceLevelHeight);
+    const wallSegments = getSecondaryWallSegments(loop, surfaceLevel, shiftedBoundary, surfaceLevelHeight);
     const results: [[number, number, number], [number, number, number]][] = [];
 
     for (const { triangles, loopA, loopB } of wallSegments) {

@@ -30,12 +30,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { Knot3D, SubsurfaceLoop, SubSurfacesKnot } from "./types";
+import type { Knot3D, SecondaryLoop, SecondariesKnot } from "./types";
 import tinycolor from "tinycolor2";
 import ViewerLine from "./ViewerLine.vue";
 
 const props = defineProps<{
-	knot: Knot3D | SubSurfacesKnot | SubsurfaceLoop;
+	knot: Knot3D | SecondariesKnot | SecondaryLoop;
 	surfaceColor?: string;
 	showSurfaces: boolean;
 	lineWidth?: number;
@@ -52,9 +52,9 @@ const pointsColor = computed(() => {
 	return tinycolor(props.surfaceColor).lighten(20).toString();
 });
 
-// Only a SubsurfaceLoop needs ViewerLine to add its own closing
+// Only a SecondaryLoop needs ViewerLine to add its own closing
 // segment: its walk has no notion of a duplicate closing point, unlike Knot3D/
-// SubSurfacesKnot, whose point lists already end with one for a closed knot
+// SecondariesKnot, whose point lists already end with one for a closed knot
 // (combineKnotPointsWithIntersections in drawing.ts) - asking ViewerLine to close those
 // too would draw a second, redundant closing segment on top of that existing one.
 const isClosed = computed(() => !("diagramKnot" in props.knot));

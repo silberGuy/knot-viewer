@@ -1,14 +1,14 @@
-# Spec: Subsurface surface lit shading
+# Spec: Secondary surface lit shading
 
 Status: implemented.
-Decision record: [docs/adr/0006-subsurface-surface-lit-shading-opt-in.md](../adr/0006-subsurface-surface-lit-shading-opt-in.md).
-Glossary: see `CONTEXT.md`'s "Subsurface surface" entry.
+Decision record: [docs/adr/0006-secondary-surface-lit-shading-opt-in.md](../adr/0006-secondary-surface-lit-shading-opt-in.md).
+Glossary: see `CONTEXT.md`'s "Secondary surface" entry.
 
 ## Summary
 
-Give the Subsurface surface (cap + wall) real per-face lighting so a wall panel's actual shape —
+Give the Secondary surface (cap + wall) real per-face lighting so a wall panel's actual shape —
 flat or bent across its dividing diagonal (see ADR 0005) — becomes visible, instead of the current
-single flat, unlit color. Scoped entirely to the Subsurface surface via a new opt-in `lit` prop on
+single flat, unlit color. Scoped entirely to the Secondary surface via a new opt-in `lit` prop on
 `ViewerTriangle.vue`; knot surfaces (`KnotViewerKnot.vue`) are untouched and stay unlit.
 
 ## `src/components/ViewerTriangle.vue`
@@ -83,7 +83,7 @@ const polygon = computed(() => {
 </script>
 ```
 
-## `src/components/SubSurfaceCap.vue` and `src/components/SubSurfaceWall.vue`
+## `src/components/SecondaryCap.vue` and `src/components/SecondaryWall.vue`
 
 Both pass `lit` on their own `ViewerTriangle`:
 
@@ -98,8 +98,8 @@ Both pass `lit` on their own `ViewerTriangle`:
 />
 ```
 
-No prop changes needed on `SubSurfaceCap`/`SubSurfaceWall`/`SubSurfaceSurface` themselves — `lit`
-isn't user-configurable, it's a fixed characteristic of how the Subsurface surface renders.
+No prop changes needed on `SecondaryCap`/`SecondaryWall`/`SecondarySurface` themselves — `lit`
+isn't user-configurable, it's a fixed characteristic of how the Secondary surface renders.
 
 ## `src/components/KnotViewer.vue`
 
@@ -109,7 +109,7 @@ other triangle in the scene, ignores lights entirely):
 1. A low-intensity ambient fill, so faces angled away from the headlamp aren't pure black.
 2. A point light nested *inside* `TresPerspectiveCamera` so it inherits the camera's transform (a
    "headlamp") — it always lights whatever's currently in view, regardless of how `OrbitControls`
-   orbits the camera around the Subsurface wall.
+   orbits the camera around the Secondary wall.
 
 ```vue
 <TresPerspectiveCamera
@@ -130,7 +130,7 @@ see ADR 0006.
 
 ## Docs already updated
 
-- `docs/adr/0006-subsurface-surface-lit-shading-opt-in.md`: this decision and the rejected
+- `docs/adr/0006-secondary-surface-lit-shading-opt-in.md`: this decision and the rejected
   alternatives (data-driven fake color, dropping the front/back orientation split, applying `lit`
   globally to `ViewerTriangle`).
 
@@ -138,8 +138,8 @@ see ADR 0006.
 
 No test suite exists in this repo (per `AGENTS.md`); validate manually via `yarn dev`:
 
-1. Draw two or more overlapping knots with at least one real crossing so the Subsurface wall has
-   more than one panel, switch to the Subsurface tab, and confirm the wall now shows visible
+1. Draw two or more overlapping knots with at least one real crossing so the Secondary wall has
+   more than one panel, switch to the Secondary tab, and confirm the wall now shows visible
    shading (not flat, uniform color).
 2. Orbit the camera fully around the wall via `OrbitControls` and confirm it never goes dark or
    unlit from any angle (the headlamp should follow the view).
@@ -149,7 +149,7 @@ No test suite exists in this repo (per `AGENTS.md`); validate manually via `yarn
    surface.
 4. Confirm knot surfaces (`KnotViewerKnot`, rendered via plain `ViewerTriangle` without `lit`) look
    exactly as before — unlit, unaffected by the new lights.
-5. Toggle the Subsurface opacity control and confirm transparency still works correctly on the now
+5. Toggle the Secondary opacity control and confirm transparency still works correctly on the now
    `MeshLambertMaterial`-based triangles.
 6. `yarn build` (runs `vue-tsc -b`) to confirm no type errors from the new prop/material branching.
 

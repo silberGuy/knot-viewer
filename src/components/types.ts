@@ -63,7 +63,7 @@ export type Knot3D = {
     surfaceTriangles: Triangle3D[];
 }
 
-export type SubSurfacesPoint = {
+export type SecondariesPoint = {
     id: string;
     coords: [number, number, number];
     surfaceIntersection?: {
@@ -77,22 +77,22 @@ export type SubSurfacesPoint = {
     diagramPoint?: DiagramPoint
 }
 
-export type SubSurfacesKnot = Omit<Knot3D, 'points'> & {
-    points: SubSurfacesPoint[];
+export type SecondariesKnot = Omit<Knot3D, 'points'> & {
+    points: SecondariesPoint[];
 }
 
 // The walked loop itself - not sourced from the drawing. Has no surfaceTriangles of its own -
-// see the Subsurface cap (SubSurfaceCap.vue) for the separate, flattened surface built from it.
-export type SubsurfaceLoop = Omit<SubSurfacesKnot, 'diagramKnot' | 'surfaceTriangles'> & {
+// see the Secondary cap (SecondaryCap.vue) for the separate, flattened surface built from it.
+export type SecondaryLoop = Omit<SecondariesKnot, 'diagramKnot' | 'surfaceTriangles'> & {
     id: string;
     // True only if the walk's last step landed back on its own start point - see CONTEXT.md.
     isClosed: boolean;
 }
 
-// A single triangle of the Subsurface surface (cap or wall), as three raw [x, y, z] tuples.
-export type SubSurfaceTriangle = [[number, number, number], [number, number, number], [number, number, number]];
+// A single triangle of the Secondary surface (cap or wall), as three raw [x, y, z] tuples.
+export type SecondaryTriangle = [[number, number, number], [number, number, number], [number, number, number]];
 
-// Which knot's role (fixed "lower"/"upper" per crossing, see getCrossingRole) the subsurface
+// Which knot's role (fixed "lower"/"upper" per crossing, see getCrossingRole) the secondary
 // walk continues on from a crossing point, and forward/backward once there. Defaults to
 // "upperForward".
 export type CrossingWalkDirection = "lowerForward" | "lowerBackward" | "upperForward" | "upperBackward";

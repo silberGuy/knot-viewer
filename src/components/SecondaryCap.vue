@@ -12,11 +12,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { Coords2D, SubsurfaceLoop } from "./types";
-import { getSubSurfaceCapTriangles } from "../utils/sub-surfaces";
+import type { Coords2D, SecondaryLoop } from "./types";
+import { getSecondaryCapTriangles } from "../utils/secondary-surfaces";
 
 const props = defineProps<{
-	loop: SubsurfaceLoop;
+	loop: SecondaryLoop;
 	surfaceLevel: number;
 	surfaceLevelHeight: number;
 	color?: string;
@@ -28,10 +28,10 @@ const props = defineProps<{
 // Stays mounted regardless of `visible` and just renders zero triangles when off, rather than
 // being conditionally mounted by a parent v-if - mirrors KnotViewerKnot's showSurfaces prop
 // (the already-working "Show Surfaces" toggle), unlike an outer v-if which didn't reliably hide
-// this in TresJS when toggled without also unmounting via the Subsurface tab switch.
+// this in TresJS when toggled without also unmounting via the Secondary tab switch.
 const triangles = computed(() =>
 	props.visible === false
 		? []
-		: getSubSurfaceCapTriangles(props.loop, props.surfaceLevel, props.shiftedBoundary, props.surfaceLevelHeight)
+		: getSecondaryCapTriangles(props.loop, props.surfaceLevel, props.shiftedBoundary, props.surfaceLevelHeight)
 );
 </script>

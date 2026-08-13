@@ -1,5 +1,5 @@
 <template>
-	<SubSurfaceCap
+	<SecondaryCap
 		:loop="loop"
 		:surfaceLevel="surfaceLevel"
 		:surfaceLevelHeight="surfaceLevelHeight"
@@ -8,7 +8,7 @@
 		:visible="visible && capVisible"
 		:shiftedBoundary="shiftedBoundary"
 	/>
-	<SubSurfaceWall
+	<SecondaryWall
 		:loop="loop"
 		:surfaceLevel="surfaceLevel"
 		:surfaceLevelHeight="surfaceLevelHeight"
@@ -21,14 +21,14 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import SubSurfaceCap from "./SubSurfaceCap.vue";
-import SubSurfaceWall from "./SubSurfaceWall.vue";
-import type { SubsurfaceLoop } from "./types";
-import { getShiftedCapBoundary } from "../utils/sub-surfaces";
+import SecondaryCap from "./SecondaryCap.vue";
+import SecondaryWall from "./SecondaryWall.vue";
+import type { SecondaryLoop } from "./types";
+import { getShiftedCapBoundary } from "../utils/secondary-surfaces";
 
 const props = withDefaults(
 	defineProps<{
-		loop: SubsurfaceLoop;
+		loop: SecondaryLoop;
 		surfaceLevel: number;
 		surfaceLevelHeight: number;
 		color?: string;

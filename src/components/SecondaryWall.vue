@@ -12,11 +12,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ViewerTriangle from "./ViewerTriangle.vue";
-import type { Coords2D, SubsurfaceLoop } from "./types";
-import { getSubSurfaceWallTriangles } from "../utils/sub-surfaces";
+import type { Coords2D, SecondaryLoop } from "./types";
+import { getSecondaryWallTriangles } from "../utils/secondary-surfaces";
 
 const props = defineProps<{
-	loop: SubsurfaceLoop;
+	loop: SecondaryLoop;
 	surfaceLevel: number;
 	surfaceLevelHeight: number;
 	color?: string;
@@ -26,11 +26,11 @@ const props = defineProps<{
 }>();
 
 // Stays mounted regardless of `visible` and just renders zero triangles when off - see
-// SubSurfaceCap.vue for why (mirrors KnotViewerKnot's showSurfaces prop).
+// SecondaryCap.vue for why (mirrors KnotViewerKnot's showSurfaces prop).
 const triangles = computed(() =>
 	props.visible === false
 		? []
-		: getSubSurfaceWallTriangles(
+		: getSecondaryWallTriangles(
 				props.loop,
 				props.surfaceLevel,
 				props.shiftedBoundary,

@@ -5,7 +5,7 @@ edges against the other's plane via `Ray.intersectTriangle`. That math divides b
 tested segment crosses the plane; wall triangles are built to share a vertex or full edge with the
 knot triangle they're tested against, so some of their edges are, by construction, nearly parallel
 to that plane - exactly the case where the division is numerically unstable and can return a
-wildly displaced point instead of correctly finding none. This showed up as a spurious "Subsurface
+wildly displaced point instead of correctly finding none. This showed up as a spurious "Secondary
 intersection" line sitting near a loop edge: intermittent, sensitive to tiny cap-shift/level-height
 changes, and visibly tilted rather than coincident with the true edge.
 

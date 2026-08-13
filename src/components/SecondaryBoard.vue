@@ -1,6 +1,6 @@
 <template>
 	<div class="drawing-board">
-		<p v-if="!hasEnoughPointsForSubsurface" class="board-empty-message">
+		<p v-if="!hasEnoughPointsForSecondary" class="board-empty-message">
 			No knots are given
 		</p>
 		<template v-else>
@@ -8,7 +8,7 @@
 				<line
 					v-for="segment in loopSegments"
 					:key="segment.id"
-					class="subsurface-loop-line"
+					class="secondary-loop-line"
 					:x1="segment.from.x"
 					:y1="segment.from.y"
 					:x2="segment.to.x"
@@ -29,7 +29,7 @@
 							:cy="point.y"
 							r="6"
 							:fill="knot.color || 'black'"
-							@click.stop="subsurfaceWalkStore.setStartPoint(point.id)"
+							@click.stop="secondaryWalkStore.setStartPoint(point.id)"
 						/>
 					</template>
 				</KnotShape>
@@ -42,23 +42,23 @@
 					v-for="arrow in crossingWalkArrows"
 					:key="arrow.crossingId"
 					:arrow="arrow"
-					:walk-points="subSurfaceLoop.points"
-					:knots="knotsWithSubSurfacePoints"
+					:walk-points="secondaryLoop.points"
+					:knots="knotsWithSecondaryPoints"
 					@select="
 						(direction) =>
-							subsurfaceWalkStore.setDirection(arrow.crossingId, direction)
+							secondaryWalkStore.setDirection(arrow.crossingId, direction)
 					"
 				/>
 				<circle
 					v-if="projectedLoopPoints.length > 0"
-					class="subsurface-loop-start-marker"
+					class="secondary-loop-start-marker"
 					:cx="projectedLoopPoints[0].x"
 					:cy="projectedLoopPoints[0].y"
 					r="10"
 				/>
 			</svg>
 			<p v-if="isLoopUnclosed" class="loop-unclosed-message">
-				Subsurface loop is not closed
+				Secondary loop is not closed
 			</p>
 		</template>
 	</div>
@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
-import type { DrawingData, Knot, SubSurfacesPoint } from "./types.ts";
+import type { DrawingData, Knot, SecondariesPoint } from "./types.ts";
 import KnotIntersections from "./KnotIntersections.vue";
 import KnotShape from "./KnotShape.vue";
 import CrossingWalkArrow from "./CrossingWalkArrow.vue";
@@ -74,21 +74,21 @@ import { getDiagram, get3DKnots } from "../utils/diagram.ts";
 import {
 	combineKnotsWithSurfaceIntersections,
 	getCrossingWalkArrows,
-	getSubSurfaceIntersectionsLoop,
-	projectSubSurfacesPoint,
-} from "../utils/sub-surfaces.ts";
-import { useSubsurfaceWalkStore } from "../data/subsurface-walk.ts";
+	getSecondaryIntersectionsLoop,
+	projectSecondariesPoint,
+} from "../utils/secondary-surfaces.ts";
+import { useSecondaryWalkStore } from "../data/secondary-walk.ts";
 
 const props = defineProps<{
 	knots: Knot[];
 	interFlipIds: Set<string>;
 }>();
 
-const subsurfaceWalkStore = useSubsurfaceWalkStore();
+const secondaryWalkStore = useSecondaryWalkStore();
 
 // Matches the App.vue tab-disable threshold - fewer than 3 points can't form
-// a meaningful subsurface loop.
-const hasEnoughPointsForSubsurface = computed(
+// a meaningful secondary loop.
+const hasEnoughPointsForSecondary = computed(
 	() => props.knots.reduce((count, knot) => count + knot.points.length, 0) >= 3,
 );
 
@@ -96,7 +96,7 @@ const hasEnoughPointsForSubsurface = computed(
 // projected loop lines up with the knots' own lines drawn above. Guarded:
 // getDiagram/get3DKnots assume enough points to work out surface levels from.
 const knots3D = computed(() => {
-	if (!hasEnoughPointsForSubsurface.value) return [];
+	if (!hasEnoughPointsForSecondary.value) return [];
 	const drawingData: DrawingData = {
 		knots: props.knots,
 		interFlipIds: props.interFlipIds,
@@ -105,40 +105,40 @@ const knots3D = computed(() => {
 });
 
 // The knots (and therefore the crossings) are static for as long as this board is showing, so
-// pruning once on mount - which only happens when the Subsurface tab is switched into, since
+// pruning once on mount - which only happens when the Secondary tab is switched into, since
 // App.vue toggles this board with v-if/v-else - is enough; there's no later point where the set
 // of crossings could change under it. Prune rather than reset: overrides now persist across tab
 // switches, this only clears ones a Drawing-tab edit actually invalidated.
 onMounted(() => {
-	subsurfaceWalkStore.pruneStale(knots3D.value);
+	secondaryWalkStore.pruneStale(knots3D.value);
 });
 
-const subSurfaceLoop = computed(() =>
-	getSubSurfaceIntersectionsLoop(
+const secondaryLoop = computed(() =>
+	getSecondaryIntersectionsLoop(
 		knots3D.value,
-		subsurfaceWalkStore.crossingWalkDirections,
-		subsurfaceWalkStore.selectedStartPointId,
+		secondaryWalkStore.crossingWalkDirections,
+		secondaryWalkStore.selectedStartPointId,
 	),
 );
 
 const isLoopUnclosed = computed(
 	() =>
-		subSurfaceLoop.value.points.length > 0 && !subSurfaceLoop.value.isClosed,
+		secondaryLoop.value.points.length > 0 && !secondaryLoop.value.isClosed,
 );
 
 // Each knot's own point list (including injected crossing points), so
 // CrossingWalkArrow can look up a crossing's arrival direction (see
 // CONTEXT.md) by comparing the walk's previous point against a knot's own
 // forward/backward neighbor indices.
-const knotsWithSubSurfacePoints = computed(() =>
+const knotsWithSecondaryPoints = computed(() =>
 	combineKnotsWithSurfaceIntersections(knots3D.value),
 );
 
-type ProjectedLoopPoint = { x: number; y: number; source: SubSurfacesPoint };
+type ProjectedLoopPoint = { x: number; y: number; source: SecondariesPoint };
 
 const projectedLoopPoints = computed<ProjectedLoopPoint[]>(() =>
-	subSurfaceLoop.value.points.map((point) => ({
-		...projectSubSurfacesPoint(point),
+	secondaryLoop.value.points.map((point) => ({
+		...projectSecondariesPoint(point),
 		source: point,
 	})),
 );
@@ -177,8 +177,8 @@ const loopSegments = computed<LoopSegment[]>(() => {
 // owns where the resulting override is stored.
 const crossingWalkArrows = computed(() =>
 	getCrossingWalkArrows(
-		knotsWithSubSurfacePoints.value,
-		subsurfaceWalkStore.crossingWalkDirections,
+		knotsWithSecondaryPoints.value,
+		secondaryWalkStore.crossingWalkDirections,
 	),
 );
 </script>
@@ -197,7 +197,7 @@ svg {
 	height: 100%;
 }
 
-.subsurface-loop-line {
+.secondary-loop-line {
 	stroke: #ff00ff88;
 	stroke-width: 8;
 }
@@ -206,7 +206,7 @@ svg {
 	cursor: pointer;
 }
 
-.subsurface-loop-start-marker {
+.secondary-loop-start-marker {
 	fill: none;
 	stroke: #00aaff;
 	stroke-width: 3;

@@ -1,6 +1,6 @@
-# Subsurface wall walks the raw loop, independent of the cap's self-touching split
+# Secondary wall walks the raw loop, independent of the cap's self-touching split
 
-The Subsurface cap (ADR 0004) is a flat, triangulated plane above the loop, deliberately built as
+The Secondary cap (ADR 0004) is a flat, triangulated plane above the loop, deliberately built as
 a separate, first step from connecting that cap down to the loop's own points at their real
 height. This change adds that connection: the "wall" - for every pair of adjacent loop points, a
 rectangle from their flattened, shared-height cap positions down to their real coords.
@@ -19,6 +19,6 @@ no reason to inherit).
 Each rectangle's four corners - `capᵢ`, `capᵢ₊₁`, `loopᵢ₊₁`, `loopᵢ` - aren't guaranteed to be
 planar: loop points can sit at different real heights, and a flattened cap point's x/z can differ
 slightly from its loop point's real x/z when the loop point carries a `diagramPoint` (see
-`projectSubSurfacesPoint`). The rectangle is split into two triangles via the diagonal from `capᵢ`
+`projectSecondariesPoint`). The rectangle is split into two triangles via the diagonal from `capᵢ`
 to `loopᵢ₊₁`. Winding order doesn't matter for visibility, since `ViewerTriangle` already renders
 both `FrontSide` and `BackSide`.

@@ -83,7 +83,7 @@ function getIntersectionPointForKnot(
     return knot.points.find((point) => point.intersection?.id === intersectionId);
 }
 
-export function buildSubSurfaceLoopFromDiagramKnots(
+export function buildSecondaryLoopFromDiagramKnots(
     diagramKnots: DiagramKnot[]
 ): DiagramPoint[] {
     if (diagramKnots.length === 0) return [];
