@@ -35,6 +35,7 @@
 				controlsStore.isSubSurfaceActive
 			}`"
 		/>
+		<div class="app-version">v{{ appVersion }}</div>
 	</div>
 </template>
 
@@ -50,6 +51,7 @@ import BoardInfo from "./components/BoardInfo.vue";
 import { useControlsStore } from "./data/controls";
 import { useDrawingStore } from "./data/drawing";
 
+const appVersion = __APP_VERSION__;
 const controlsStore = useControlsStore();
 const drawingStore = useDrawingStore();
 const { knots, interFlipIds } = storeToRefs(drawingStore);
@@ -120,5 +122,15 @@ function updateViewerData() {
 .board-tabs button:disabled {
 	cursor: not-allowed;
 	color: #999;
+}
+
+.app-version {
+	position: absolute;
+	bottom: 0.5em;
+	right: 0.75em;
+	z-index: 1;
+	font-size: 0.75em;
+	color: #999;
+	pointer-events: none;
 }
 </style>
