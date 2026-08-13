@@ -30,6 +30,11 @@ const props = defineProps<{
 const triangles = computed(() =>
 	props.visible === false
 		? []
-		: getSubSurfaceWallTriangles(props.loop, props.surfaceLevel, props.shiftedBoundary, props.surfaceLevelHeight)
+		: getSubSurfaceWallTriangles(
+				props.loop,
+				props.surfaceLevel,
+				props.shiftedBoundary,
+				props.surfaceLevelHeight,
+			),
 );
 </script>

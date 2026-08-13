@@ -620,14 +620,83 @@ function getCapLoopPoints(loop: SubsurfaceLoop): SubSurfacesPoint[] {
     return loop.points.filter((point) => !isClosingPoint(point));
 }
 
+// How far apart to nudge a Zigzag's coincident pair (see nudgeZigzagBoundary below). Tune here.
+const ZIGZAG_NUDGE_DISTANCE = 10;
+
+// Coordinate-coincidence epsilon for matching a Zigzag's pair - bigger than float noise, smaller
+// than any real geometry (matches arePointsClose/isPointBetweenPoints's 0.01 elsewhere in this file).
+const ZIGZAG_MATCH_EPSILON = 0.01;
+
+function coordsDistance(a: Coords2D, b: Coords2D): number {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+// `index`'s two boundary neighbors, split into whichever continues along its own knot's line
+// ("outward" - the nudge direction) and whichever is itself a Crossing point, i.e. part of the
+// short run between the ordinary Intersection point and the Crossing point coincident with it
+// ("cluster").
+function getZigzagNeighbors(points: SubSurfacesPoint[], index: number) {
+    const n = points.length;
+    const nextIndex = (index + 1) % n;
+    const prevIndex = (index - 1 + n) % n;
+    return points[nextIndex].diagramPoint
+        ? { outwardIndex: nextIndex, clusterPoint: points[prevIndex] }
+        : { outwardIndex: prevIndex, clusterPoint: points[nextIndex] };
+}
+
+function normalize(v: Coords2D): Coords2D {
+    const length = Math.hypot(v.x, v.y);
+    return length === 0 ? { x: 0, y: 0 } : { x: v.x / length, y: v.y / length };
+}
+
+// Separates an ordinary diagram Intersection point from the Crossing point landing on top of it (a
+// Zigzag, CONTEXT.md) - left coincident, they break the cap's triangulation, the wall's intersection
+// tests, and cap shift. Moves the "lower" role's point toward its own knot's line, "upper" the same
+// distance opposite - either point can end up playing either role (see getCrossingRole). Runs before
+// cap shift, which then treats the result as ordinary input. Skips within-knot self-crossings (a
+// Zigzag only happens between two different knots) and plain un-pierced duplicates (ADR 0004 - no
+// Crossing point to find there, so this simply won't match).
+function nudgeZigzagBoundary(points: SubSurfacesPoint[], flattened: Coords2D[]): Coords2D[] {
+    const nudged = [...flattened];
+
+    for (let i = 0; i < points.length; i++) {
+        const diagramPoint = points[i].diagramPoint;
+        const intersection = diagramPoint?.intersection;
+        if (!diagramPoint || !intersection || intersection.isWithinKnot) continue;
+
+        const j = points.findIndex((p, index) =>
+            index !== i && !p.diagramPoint && coordsDistance(flattened[index], flattened[i]) < ZIGZAG_MATCH_EPSILON,
+        );
+        if (j === -1) continue;
+
+        const [lowerIndex, upperIndex] = diagramPoint.knotId === intersection.bottomLineKnotId ? [i, j] : [j, i];
+        const { outwardIndex, clusterPoint } = getZigzagNeighbors(points, lowerIndex);
+        // The Crossing point coincident with lowerIndex should itself be a cluster neighbor (that's
+        // exactly how this pair was found) - if neither of lowerIndex's own boundary neighbors is a
+        // Crossing point, something else is going on; leave it alone rather than guess a direction.
+        if (clusterPoint.diagramPoint) continue;
+
+        const direction = normalize({
+            x: flattened[outwardIndex].x - flattened[lowerIndex].x,
+            y: flattened[outwardIndex].y - flattened[lowerIndex].y,
+        });
+
+        nudged[lowerIndex] = translateBy(flattened[lowerIndex], direction, ZIGZAG_NUDGE_DISTANCE);
+        nudged[upperIndex] = translateBy(flattened[upperIndex], direction, -ZIGZAG_NUDGE_DISTANCE);
+    }
+
+    return nudged;
+}
+
 // The cap's boundary shifted by `distance` (CONTEXT.md's "Cap shift"), keyed by point id so both
 // getSubSurfaceCapTriangles and getSubSurfaceWallTriangles (both walking the raw loop) can look up
 // their own points' shifted position - each point using its own real (raw loop) neighbors. Any
 // self-touching this produces or resolves is handled separately, by getSubSurfaceCapTriangles
-// alone (ADR 0007) - shifting itself doesn't need to know about it.
+// alone (ADR 0007) - shifting itself doesn't need to know about it. Zigzags (CONTEXT.md) are
+// separated first (nudgeZigzagBoundary), before shifting ever sees the boundary.
 export function getShiftedCapBoundary(loop: SubsurfaceLoop, distance: number): Map<string, Coords2D> {
     const points = getCapLoopPoints(loop);
-    const flattened = points.map(projectSubSurfacesPoint);
+    const flattened = nudgeZigzagBoundary(points, points.map(projectSubSurfacesPoint));
     const shifted = new Map<string, Coords2D>();
     for (let i = 0; i < points.length; i++) {
         if (points.length < 3) {

@@ -103,6 +103,21 @@ knot's diagram and keeps that diagram point's identity. For the Subsurface board
 a crossing point's 3D coordinates are projected to a 2D position the same way any 3D point is
 (see [AGENTS.md](./AGENTS.md)) — but the point's origin is 3D, not 2D.
 
+**Zigzag**:
+A short run of **Subsurface loop** points produced wherever a knot's own bridging triangle (built by
+`getIntersectionsNotInKnotTriangles` in `surfaces.ts` around a real 2D `Intersection`, to cover the
+height change between over/under levels) crosses the other knot's surface twice near that same
+intersection instead of once: one **crossing point** lands almost exactly on the intersection itself
+and doesn't change the walk's knot (its resolved direction already matches the knot it's on, so the
+walk just passes through), the other is the bridging triangle's far edge meeting the other knot's
+surface and *is* where the walk actually jumps knots. Both, plus the ordinary diagram point at the
+intersection itself, sit on that knot's own straight line (see "Going forward on a knot"), and the
+jump point's twin lands almost exactly on top of it once the walk crosses over. This is correct,
+expected loop geometry, not a walk defect - only the **Subsurface cap**, **Subsurface wall**, and
+**Cap shift**, which build flat/derived geometry from these near-duplicate, near-collinear points,
+need to account for it.
+_Avoid_: treating a zigzag as something the walk itself should eliminate or dedupe.
+
 **Subsurface surface**:
 The surface built from a Subsurface loop's own points, shown only in the Viewer (there is no 2D
 equivalent on the Subsurface board). Rendered by `SubSurfaceSurface.vue`, separate from the loop's
